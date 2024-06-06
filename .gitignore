@@ -1,0 +1,25 @@
+# Python files
+*.pyc
+*.pyo
+build
+
+# Local env files
+.env.local
+.env.*.local
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.project
+.pydevproject
+.settings
+
+# Documentation
+.eggs/
+docs/_build/
+docs/source
