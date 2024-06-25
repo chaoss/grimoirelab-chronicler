@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) GrimoireLab Developers
@@ -17,15 +16,22 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import os
-import sys
-import unittest
+
+from typing import Any
+
+from cloudevents.http import CloudEvent
+
+from chronicler.eventizer import Eventizer
 
 
-if __name__ == '__main__':
-    test_suite = unittest.TestLoader().discover(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "."),
-        pattern='test_*.py'
-    )
-    result = unittest.TextTestRunner(buffer=True).run(test_suite)
-    sys.exit(not result.wasSuccessful())
+class EventizerTestingClass(Eventizer):
+    """Subclass of Eventizer for testing"""
+
+    def eventize_item(self, raw_item: dict[str, Any]) -> list[CloudEvent]:
+        attributes = {
+            "id": raw_item['id'],
+            "type": "test_event",
+            "source": "test",
+            "time": raw_item['time'],
+        }
+        return [CloudEvent(attributes, raw_item['data'])]
