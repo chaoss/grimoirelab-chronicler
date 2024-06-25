@@ -18,6 +18,7 @@
 
 import importlib
 import pkgutil
+import os
 
 from collections.abc import Iterator, Generator
 from typing import Any
@@ -28,30 +29,57 @@ from .events import core
 
 
 class Eventizer:
-    """Abstract class to eventize Perceval data."""
+    """Abstract class to eventize data.
 
-    def eventize(self, raw_items: Iterator[dict[str, Any]]) -> Generator[dict[str, Any]]:
+    Events will be generated calling to the `eventize` method.
+    This method will take items produced by `perceval` and
+    will convert them in GrimoireLab events.
+
+    The class can only process items of one type. In other words,
+    `git` items can't be mixed with `github` items. However,
+    the same eventizer can process different categories of
+    the same type. A `github` eventizer would process `issues`,
+    `pull requests`, etc.
+
+    To create your own eventizer, sub-class this class by implementing
+    the method `eventize_item`. This method should have the
+    logic to given a perceval item, produce the events associated to
+    that item.
+    """
+    def eventize(self, raw_items: Iterator[dict[str, Any]]) -> Generator[CloudEvent]:
+        """Generate GrimoireLab events.
+
+        Produce events from the given list of perceval items.
+        The items must be of the same type.
+        """
         for raw_item in raw_items:
             yield from self.eventize_item(raw_item)
 
     def eventize_item(self, raw_item: dict[str, Any]) -> list[CloudEvent]:
+        """Eventize a item."""
         raise NotImplementedError
 
 
-def eventize(name: str, raw_items: Iterator[dict[str, Any]]) -> Generator[dict[str, Any]]:
-    """Eventize data of a given type."""
+def eventize(name: str, raw_items: Iterator[dict[str, Any]]) -> Generator[CloudEvent]:
+    """Eventize data of a given type.
 
-    eventizers = find_eventizers(core)
+    Handy function to produce events from a set of perceval items
+    of given type.
+    """
+    top_package_name = os.environ.get('CHRONICLER_EVENTIZERS',
+                                      'chronicler.events')
+
+    eventizers = _find_eventizers(top_package_name)
 
     try:
         eventizer = eventizers[name]()
     except KeyError:
-        raise ValueError(f"Unknown eventizer {name}")
+        raise ValueError(f"Unknown eventizer '{name}'")
 
     yield from eventizer.eventize(raw_items)
 
 
-def find_eventizers(top_package: str) -> dict[str, Eventizer]:
+def _find_eventizers(top_package_name: str) -> dict[str, Eventizer]:
     """Find available eventizers.
 
     Look for the `Eventizer` classes under `top_package`
@@ -62,6 +90,8 @@ def find_eventizers(top_package: str) -> dict[str, Eventizer]:
 
     :returns: a dict with `Eventizer`
     """
+    top_package = importlib.import_module(top_package_name)
+
     candidates = pkgutil.walk_packages(top_package.__path__,
                                        prefix=top_package.__name__ + '.')
 
