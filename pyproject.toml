@@ -42,12 +42,13 @@ include = [
 chronicler = "chronicler.chronicler:chronicler"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.11"
+
 click = "^8.1.7"
 cloudevents = "^1.10.1"
 
 [tool.poetry.group.dev.dependencies]
-flake8 = ">=4.0.1"
+flake8 = "^7.1.1"
 
 [build-system]
 requires = ["poetry-core"]
