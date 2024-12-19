@@ -46,6 +46,7 @@ python = "^3.11"
 
 click = "^8.1.7"
 cloudevents = "^1.10.1"
+coverage = "^7.2.3"
 
 [tool.poetry.group.dev.dependencies]
 flake8 = "^7.1.1"

@@ -25,8 +25,6 @@ from typing import Any
 
 from cloudevents.http import CloudEvent
 
-from .events import core
-
 
 class Eventizer:
     """Abstract class to eventize data.

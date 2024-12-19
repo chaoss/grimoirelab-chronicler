@@ -70,7 +70,7 @@ class GitEventizer(Eventizer):
 
         return events
 
-    def _eventize_commit_actions(self, parent_event: CloudEvent , raw_files_data):
+    def _eventize_commit_actions(self, parent_event: CloudEvent, raw_files_data):
 
         events = []
 
