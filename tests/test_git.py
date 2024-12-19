@@ -165,8 +165,8 @@ class GitEventizerTestCase(unittest.TestCase):
         self.assertEqual(commit_event['type'], GIT_EVENT_MERGE_COMMIT)
         self.assertEqual(commit_event['source'], 'https://example.git')
         self.assertEqual(commit_event['time'], 1392185439.0)
-        self.assertEqual(commit_event.data['parents'],["ce8e0b86a1e9877f42fe9453ede418519115f367",
-                                                       "51a3b654f252210572297f47597b31527c475fb8"])
+        self.assertEqual(commit_event.data['parents'], ["ce8e0b86a1e9877f42fe9453ede418519115f367",
+                                                        "51a3b654f252210572297f47597b31527c475fb8"])
 
         action_event = events[1]
         self.assertEqual(action_event['id'], '1cfb8955e9bdab98dc4cf120985839683a01a310')
