@@ -58,5 +58,5 @@ poetry shell
 ## Contributing
 
 Chronicler is part of the GrimoireLab project. Please read its
-[Contributing Guidelines](https://github.com/chaoss/grimoirelab/blob/master/CONTRIBUTING.md)
+[Contributing Guidelines](https://github.com/chaoss/grimoirelab/blob/main/CONTRIBUTING.md)
 for more information.
