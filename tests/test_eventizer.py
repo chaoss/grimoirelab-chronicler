@@ -100,7 +100,7 @@ class TestEventize(unittest.TestCase):
     """Unit tests for eventize function"""
 
     def setUp(self) -> None:
-        os.environ['CHRONICLER_EVENTIZERS'] = 'tests.events_test_pck'
+        os.environ['CHRONICLER_EVENTIZERS'] = 'events_test_pck'
 
     def tearDown(self) -> None:
         os.environ['CHRONICLER_EVENTIZERS'] = 'chronicler.events'
