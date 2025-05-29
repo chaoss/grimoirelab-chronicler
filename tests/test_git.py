@@ -24,7 +24,8 @@ from chronicler.events.core.git import (GitEventizer,
                                         GIT_EVENT_MERGE_COMMIT,
                                         GIT_EVENT_ACTION_ADDED,
                                         GIT_EVENT_ACTION_MODIFIED,
-                                        GIT_EVENT_ACTION_REPLACED)
+                                        GIT_EVENT_ACTION_REPLACED,
+                                        GIT_EVENT_ACTION_COPIED)
 
 
 class GitEventizerTestCase(unittest.TestCase):
@@ -252,6 +253,105 @@ class GitEventizerTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             _ = eventizer.eventize_item(raw_item)
         self.assertEqual(str(context.exception), "'uuid' attribute not found on item.")
+
+    def test_eventize_commit_copy_files(self):
+        """Check if events with multiple copied files are generated correctly with different ids"""
+
+        eventizer = GitEventizer()
+
+        raw_item = {
+            "backend_name": "Git",
+            "backend_version": "1.0.1",
+            "category": "commit",
+            "classified_fields_filtered": None,
+            "data": {
+                "Author": "Tom <tom@example.com>",
+                "AuthorDate": "Mon Apr 29 16:25:56 2019 -0700",
+                "Commit": "GitHub <noreply@github.com>",
+                "CommitDate": "Mon Apr 29 16:25:56 2019 -0700",
+                "commit": "7882c41g607ee5273da9637da0bb20ca7634cb83",
+                "files": [
+                    {
+                        "action": "C100",
+                        "added": "0",
+                        "file": "packages/react-events/FocusScope.js",
+                        "indexes": [
+                            "2ff785ef79",
+                            "2ff785ef79"
+                        ],
+                        "modes": [
+                            "100644",
+                            "100644"
+                        ],
+                        "newfile": "packages/react-events/drag.js",
+                        "removed": "0"
+                    },
+                    {
+                        "action": "C100",
+                        "added": "0",
+                        "file": "packages/react-events/FocusScope.js",
+                        "indexes": [
+                            "2ff785ef79",
+                            "2ff785ef79"
+                        ],
+                        "modes": [
+                            "100644",
+                            "100644"
+                        ],
+                        "newfile": "packages/react-events/focus-scope.js",
+                        "removed": "0"
+                    }
+                ],
+                "message": "Sample message for commit",
+                "parents": [
+                    "43c4e5f348eb5704464886e2dc3221e347041b82"
+                ],
+                "refs": []
+            },
+            "offset": "7882c41g607ee5273da9637da0bb20ca7634cb83",
+            "origin": "https://example.git",
+            "perceval_version": "1.2.2",
+            "search_fields": {
+                "item_id": "7882c41g607ee5273da9637da0bb20ca7634cb83"
+            },
+            "tag": "https://example.git",
+            "timestamp": 1.748521396234826E9,
+            "updated_on": 1.556580356E9,
+            "uuid": "6b4393b86512afc2e6757a6781e6018a661a72b0"
+        }
+
+        events = eventizer.eventize_item(raw_item)
+
+        self.assertEqual(len(events), 3)
+
+        commit_event = events[0]
+        self.assertEqual(commit_event['id'], '6b4393b86512afc2e6757a6781e6018a661a72b0')
+        self.assertEqual(commit_event['type'], GIT_EVENT_COMMIT)
+        self.assertEqual(commit_event['source'], 'https://example.git')
+        self.assertEqual(commit_event['time'], 1556580356.0)
+        self.assertEqual(commit_event.data['message'], "Sample message for commit")
+
+        action_event = events[1]
+        self.assertEqual(action_event['id'], 'b911ec8df7e804b40dddb5f402e82ae816283e9c')
+        self.assertEqual(action_event['linked_event'], '6b4393b86512afc2e6757a6781e6018a661a72b0')
+        self.assertEqual(action_event['type'], GIT_EVENT_ACTION_COPIED)
+        self.assertEqual(action_event['source'], 'https://example.git')
+        self.assertEqual(action_event['time'], 1556580356.0)
+        self.assertEqual(action_event.data['filename'], 'packages/react-events/FocusScope.js')
+        self.assertEqual(action_event.data['new_filename'], 'packages/react-events/drag.js')
+        self.assertEqual(action_event.data['added_lines'], '0')
+        self.assertEqual(action_event.data['deleted_lines'], '0')
+
+        action_event = events[2]
+        self.assertEqual(action_event['id'], '5e1d30f0fd85e34cb08987bbb202201a31769b39')
+        self.assertEqual(action_event['linked_event'], '6b4393b86512afc2e6757a6781e6018a661a72b0')
+        self.assertEqual(action_event['type'], GIT_EVENT_ACTION_COPIED)
+        self.assertEqual(action_event['source'], 'https://example.git')
+        self.assertEqual(action_event['time'], 1556580356.0)
+        self.assertEqual(action_event.data['filename'], 'packages/react-events/FocusScope.js')
+        self.assertEqual(action_event.data['new_filename'], 'packages/react-events/focus-scope.js')
+        self.assertEqual(action_event.data['added_lines'], '0')
+        self.assertEqual(action_event.data['deleted_lines'], '0')
 
 
 if __name__ == '__main__':
