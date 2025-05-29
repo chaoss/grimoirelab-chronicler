@@ -116,7 +116,11 @@ class GitEventizer(Eventizer):
         else:
             raise ValueError(f"No valid action: {action}")
 
-        event_id = uuid(event_uuid, file_data['file'], action)
+        id_args = [event_uuid, file_data['file'], action]
+        if 'newfile' in file_data:
+            id_args.append(file_data['newfile'])
+
+        event_id = uuid(*id_args)
 
         data = {
             "filename": file_data['file'],

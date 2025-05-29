@@ -1,0 +1,9 @@
+---
+title: Event ID generation for Git actions updated
+category: fixed
+author: Jose Javier Merchante <jjmerchante@bitergia.com>
+issue: null
+notes: >
+  Commits containing multiple copy file actions for the same file
+  generated duplicate event IDs because the new file name wasn’t
+  included in the ID calculation.
