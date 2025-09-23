@@ -16,12 +16,15 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from typing import Any
+import logging
+import re
+
+from typing import Any, Generator
 
 from cloudevents.http import CloudEvent
+from grimoirelab_toolkit.identities import generate_uuid
 
-from ...eventizer import Eventizer, uuid
-
+from ...eventizer import Eventizer, uuid, Identity
 
 GIT_EVENT_COMMIT = "org.grimoirelab.events.git.commit"
 GIT_EVENT_MERGE_COMMIT = "org.grimoirelab.events.git.merge"
@@ -32,11 +35,45 @@ GIT_EVENT_ACTION_REPLACED = "org.grimoirelab.events.git.file.replaced"
 GIT_EVENT_ACTION_COPIED = "org.grimoirelab.events.git.file.copied"
 GIT_EVENT_ACTION_TYPE_CHANGED = "org.grimoirelab.events.git.file.typechanged"
 
+GIT_EVENT_COMMIT_AUTHORED_BY = "org.grimoirelab.events.git.commit.authored_by"
+GIT_EVENT_COMMIT_COMMITTED_BY = "org.grimoirelab.events.git.commit.committed_by"
+GIT_EVENT_COMMIT_ACKED_BY = "org.grimoirelab.events.git.commit.acked_by"
+GIT_EVENT_COMMIT_CO_AUTHORED_BY = "org.grimoirelab.events.git.commit.co_authored_by"
+GIT_EVENT_COMMIT_HELPED_BY = "org.grimoirelab.events.git.commit.helped_by"
+GIT_EVENT_COMMIT_MENTORED_BY = "org.grimoirelab.events.git.commit.mentored_by"
+GIT_EVENT_COMMIT_REPORTED_BY = "org.grimoirelab.events.git.commit.reported_by"
+GIT_EVENT_COMMIT_REVIEWED_BY = "org.grimoirelab.events.git.commit.reviewed_by"
+GIT_EVENT_COMMIT_SIGNED_OFF_BY = "org.grimoirelab.events.git.commit.signed_off_by"
+GIT_EVENT_COMMIT_SUGGESTED_BY = "org.grimoirelab.events.git.commit.suggested_by"
+GIT_EVENT_COMMIT_TESTED_BY = "org.grimoirelab.events.git.commit.tested_by"
+
+COMMIT_TRAILERS = {
+    "Acked-by": GIT_EVENT_COMMIT_ACKED_BY,
+    "Co-authored-by": GIT_EVENT_COMMIT_CO_AUTHORED_BY,
+    "Helped-by": GIT_EVENT_COMMIT_HELPED_BY,
+    "Mentored-by": GIT_EVENT_COMMIT_MENTORED_BY,
+    "Reported-by": GIT_EVENT_COMMIT_REPORTED_BY,
+    "Reviewed-by": GIT_EVENT_COMMIT_REVIEWED_BY,
+    "Signed-off-by": GIT_EVENT_COMMIT_SIGNED_OFF_BY,
+    "Suggested-by": GIT_EVENT_COMMIT_SUGGESTED_BY,
+    "Tested-by": GIT_EVENT_COMMIT_TESTED_BY,
+}
+
+# Pair programming regex. Some matching examples are:
+#   - John Smith, John Doe and Jane Rae <pairprogramming@example.com>
+#   - John Smith, John Doe & Jane Rae <pairprogramming@example>
+#   - John Smith and John Doe <pairpogramming@example>
+GIT_AUTHORS_REGEX = re.compile(
+    r"(?P<first_authors>.+?)\s+(?:[aA][nN][dD]|&|\+)\s+(?P<last_author>.+?)\s+<(?P<email>[^>]+)>"
+)
+
+logger = logging.getLogger(__name__)
+
 
 class GitEventizer(Eventizer):
     """Eventize git commits"""
 
-    def eventize_item(self, raw_item: dict[str, Any]) -> list[dict[str, Any]]:
+    def eventize_item(self, raw_item: dict[str, Any]) -> list[CloudEvent]:
         events = []
 
         item_uuid = raw_item.get('uuid', None)
@@ -67,6 +104,11 @@ class GitEventizer(Eventizer):
                                                       raw_item['data']['files'])
 
         events.extend(action_events)
+
+        identities_events = self._eventize_commit_identities(event,
+                                                             raw_item)
+
+        events.extend(identities_events)
 
         return events
 
@@ -143,3 +185,116 @@ class GitEventizer(Eventizer):
         event = CloudEvent(attributes, data)
 
         return event
+
+    def _eventize_commit_identities(self, parent_event: CloudEvent, raw_item: dict[str, Any]) -> list[CloudEvent]:
+        """Eventize commit identities from a git commit item."""
+
+        events = []
+
+        authors = self._parse_authors(raw_item["data"]["Author"])
+        identity_events = self._process_identities(parent_event['source'],
+                                                   parent_event['time'],
+                                                   parent_event['id'],
+                                                   GIT_EVENT_COMMIT_AUTHORED_BY,
+                                                   authors)
+        events.extend(identity_events)
+
+        committers = self._parse_authors(raw_item["data"]["Commit"])
+        identity_events = self._process_identities(parent_event['source'],
+                                                   parent_event['time'],
+                                                   parent_event['id'],
+                                                   GIT_EVENT_COMMIT_COMMITTED_BY,
+                                                   committers)
+        events.extend(identity_events)
+
+        for trailer, event_type in COMMIT_TRAILERS.items():
+            signers = raw_item["data"].get(trailer, [])
+            identity_events = self._process_identities(parent_event['source'],
+                                                       parent_event['time'],
+                                                       parent_event['id'],
+                                                       event_type,
+                                                       signers)
+            events.extend(identity_events)
+
+        return events
+
+    def _process_identities(
+        self,
+        source: str,
+        time: str,
+        event_uuid: str,
+        event_type: str,
+        raw_identities: list[str]
+    ) -> Generator[CloudEvent, None, None]:
+        """Obtain identity events from a list of identities.
+
+        :param source: data source of the event
+        :param time: time of the event
+        :param event_uuid: UUID of the parent event
+        :param event_type: type of the identity event
+        :param raw_identities: list of strings with the identities information
+
+        :returns: generator of CloudEvent with the identity information
+        """
+        for raw_identity in raw_identities:
+            try:
+                identity = self._parse_identity(raw_identity)
+                identity_id = generate_uuid(source="git",
+                                            email=identity.email,
+                                            name=identity.name,
+                                            username=identity.username)
+            except ValueError as e:
+                logger.warning(f"Cannot generate UUID for identity '{raw_identity}' "
+                               f"in event '{event_uuid}': {e}. Skipping.")
+                continue
+
+            role = event_type.split('.')[-1]
+            event_id = uuid(event_uuid, role, identity_id)
+
+            data = {
+                "source": "git",
+                "name": identity.name,
+                "username": identity.username,
+                "email": identity.email,
+                "role": role,
+                "uuid": identity_id,
+            }
+
+            attributes = {
+                "id": event_id,
+                "linked_event": event_uuid,
+                "type": event_type,
+                "source": source,
+                "time": time,
+            }
+
+            yield CloudEvent(attributes, data)
+
+    @staticmethod
+    def _parse_authors(authors: str) -> list[str]:
+        """Parse a list of authors from a string."""
+
+        m = GIT_AUTHORS_REGEX.match(authors)
+        if m:
+            authors = m.group("first_authors").split(",")
+            authors = [author.strip() for author in authors]
+            authors += [m.group("last_author")]
+            authors += [f"<{m.group('email')}>"]
+            return authors
+        else:
+            return [authors]
+
+    @staticmethod
+    def _parse_identity(git_author: str) -> Identity:
+        """Extract identity information from a Git author string."""
+
+        fields = git_author.split("<")
+        name = fields[0]
+        name = name.strip()
+        if not name:
+            name = None
+        email = None
+        if len(fields) > 1:
+            email = git_author.split("<")[1][:-1]
+
+        return Identity(email=email, name=name)
