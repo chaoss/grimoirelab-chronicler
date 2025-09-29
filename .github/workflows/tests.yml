@@ -34,7 +34,7 @@ jobs:
     - name: Install dependencies
       run: |
         poetry install -vvv
-
+        poetry run pip install -r requirements_dev.txt
     - name: Lint with flake8
       run: |
         poetry run flake8
@@ -48,6 +48,7 @@ jobs:
 
     - name: Coveralls
       uses: coverallsapp/github-action@643bc377ffa44ace6394b2b5d0d3950076de9f63 # v2.3.0
+      continue-on-error: true
       with:
         coverage-reporter-version: "v0.6.9"
         flag-name: run ${{ join(matrix.*, ' - ') }}

@@ -20,10 +20,16 @@ import importlib
 import pkgutil
 import os
 
+from collections import namedtuple
 from collections.abc import Iterator, Generator
 from typing import Any
 
 from cloudevents.http import CloudEvent
+
+
+Identity = namedtuple('Identity',
+                      ['name', 'email', 'username'],
+                      defaults=(None, None, None))
 
 
 class Eventizer:
@@ -77,14 +83,14 @@ def eventize(name: str, raw_items: Iterator[dict[str, Any]]) -> Generator[CloudE
     yield from eventizer.eventize(raw_items)
 
 
-def _find_eventizers(top_package_name: str) -> dict[str, Eventizer]:
+def _find_eventizers(top_package_name: str) -> dict[str, type[Eventizer]]:
     """Find available eventizers.
 
-    Look for the `Eventizer` classes under `top_package`
-    and its sub-packages. When `top_package` defines a namespace,
+    Look for the `Eventizer` classes under `top_package_name`
+    and its sub-packages. When `top_package_name` defines a namespace,
     classes under that same namespace will be found too.
 
-    :param top_package: package storing eventizer classes
+    :param top_package_name: package storing eventizer classes
 
     :returns: a dict with `Eventizer`
     """

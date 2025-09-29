@@ -1,0 +1,10 @@
+---
+title: Identity events for Git commits
+category: added
+author: Jose Javier Merchante <jjmerchante@bitergia.com>
+issue: null
+notes: >
+  This update introduces functionality to extract and
+  eventize identities from git commit data. It handles
+  authors, committers, and signers, creating events for
+  each identity found.
