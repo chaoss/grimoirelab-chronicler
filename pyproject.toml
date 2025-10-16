@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "grimoirelab-chronicler"
-version = "0.0.1-rc.2"
+version = "0.1.0"
 description = "Generator of GrimoireLab events using Perceval data."
 authors = [
     "GrimoireLab Developers"
