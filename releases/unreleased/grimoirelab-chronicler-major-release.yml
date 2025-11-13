@@ -1,0 +1,9 @@
+---
+title: GrimoireLab Chronicler major release
+category: added
+author: Jose Javier Merchante <jjmerchante@bitergia.com>
+issue: null
+notes: >
+  First major release for GrimoireLab Chronicler providing the
+  initial library that converts raw items fetched by Perceval
+  into events for GrimoireLab.
