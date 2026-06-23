@@ -1,0 +1,8 @@
+---
+title: GitLab Eventizer for Issues
+category: added
+author: Jose Javier Merchante <jjmerchante@bitergia.com>
+issue: null
+notes: >
+  Handle GitLab issue events and generate related events,
+  including comments and identities.
