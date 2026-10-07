@@ -1,0 +1,8 @@
+---
+title: GitHub Eventizer for Issues
+category: added
+author: Jose Javier Merchante <jjmerchante@bitergia.com>
+issue: null
+notes: >
+  Handle GitHub issue events and generate related events,
+  including comments and identities.
