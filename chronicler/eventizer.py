@@ -145,8 +145,8 @@ def uuid(*args):
 
     :returns: a universal unique identifier
 
-    :raises ValueError: when anyone of the values is not a string,
-        is empty or `None`.
+    :raises TypeError: when any of the parameters is not a string.
+    :raises ValueError: when any of the values is empty or `None`.
     """
     import hashlib
 
@@ -154,7 +154,7 @@ def uuid(*args):
         if not isinstance(v, str):
             raise TypeError(f"{v!s} value is not a string instance")
         elif not v:
-            raise TypeError("value cannot be None or empty")
+            raise ValueError("value cannot be None or empty")
         else:
             return v
 

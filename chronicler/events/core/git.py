@@ -115,7 +115,7 @@ class GitEventizer(Eventizer):
         self,
         parent_event: CloudEvent,
         commit_hash: str,
-        raw_files_data: dict[str, Any],
+        raw_files_data: list[dict[str, Any]],
     ) -> list[CloudEvent]:
         events = []
 
@@ -158,7 +158,7 @@ class GitEventizer(Eventizer):
     def _process_action(
         self,
         source: str,
-        time,
+        time: float,
         event_uuid: str,
         commit_hash: str,
         action: str,
