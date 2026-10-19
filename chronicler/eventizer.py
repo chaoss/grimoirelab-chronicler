@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright (C) GrimoireLab Developers
 #
@@ -17,19 +16,19 @@
 #
 
 import importlib
-import pkgutil
 import os
-
+import pkgutil
 from collections import namedtuple
-from collections.abc import Iterator, Generator
+from collections.abc import Generator, Iterator
 from typing import Any
 
 from cloudevents.http import CloudEvent
 
-
-Identity = namedtuple('Identity',
-                      ['name', 'email', 'username'],
-                      defaults=(None, None, None))
+Identity = namedtuple(
+    "Identity",
+    ["name", "email", "username"],
+    defaults=(None, None, None),
+)
 
 
 class Eventizer:
@@ -50,6 +49,7 @@ class Eventizer:
     logic to given a perceval item, produce the events associated to
     that item.
     """
+
     def eventize(self, raw_items: Iterator[dict[str, Any]]) -> Generator[CloudEvent]:
         """Generate GrimoireLab events.
 
@@ -70,8 +70,7 @@ def eventize(name: str, raw_items: Iterator[dict[str, Any]]) -> Generator[CloudE
     Handy function to produce events from a set of perceval items
     of given type.
     """
-    top_package_name = os.environ.get('CHRONICLER_EVENTIZERS',
-                                      'chronicler.events')
+    top_package_name = os.environ.get("CHRONICLER_EVENTIZERS", "chronicler.events")
 
     eventizers = _find_eventizers(top_package_name)
 
@@ -96,8 +95,10 @@ def _find_eventizers(top_package_name: str) -> dict[str, type[Eventizer]]:
     """
     top_package = importlib.import_module(top_package_name)
 
-    candidates = pkgutil.walk_packages(top_package.__path__,
-                                       prefix=top_package.__name__ + '.')
+    candidates = pkgutil.walk_packages(
+        top_package.__path__,
+        prefix=top_package.__name__ + ".",
+    )
 
     modules = [name for _, name, is_pkg in candidates if not is_pkg]
 
@@ -126,7 +127,7 @@ def _find_classes(parent, modules):
         if m not in modules:
             continue
 
-        name = m.split('.')[-1]
+        name = m.split(".")[-1]
         parents.extend(kls.__subclasses__())
 
         yield name, kls
@@ -151,15 +152,15 @@ def uuid(*args):
 
     def check_value(v):
         if not isinstance(v, str):
-            raise ValueError("%s value is not a string instance" % str(v))
+            raise TypeError(f"{v!s} value is not a string instance")
         elif not v:
-            raise ValueError("value cannot be None or empty")
+            raise TypeError("value cannot be None or empty")
         else:
             return v
 
-    s = ':'.join(map(check_value, args))
+    s = ":".join(map(check_value, args))
 
-    sha1 = hashlib.sha1(s.encode('utf-8', errors='surrogateescape'))
+    sha1 = hashlib.sha1(s.encode("utf-8", errors="surrogateescape"))
     uuid_sha1 = sha1.hexdigest()
 
     return uuid_sha1

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright (C) GrimoireLab Developers
 #
@@ -29,9 +28,9 @@ class EventizerTestingClass(Eventizer):
 
     def eventize_item(self, raw_item: dict[str, Any]) -> list[CloudEvent]:
         attributes = {
-            "id": raw_item['id'],
+            "id": raw_item["id"],
             "type": "test_event",
             "source": "test",
-            "time": raw_item['time'],
+            "time": raw_item["time"],
         }
-        return [CloudEvent(attributes, raw_item['data'])]
+        return [CloudEvent(attributes, raw_item["data"])]
