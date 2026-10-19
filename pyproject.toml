@@ -50,8 +50,29 @@ coverage = "^7.2.3"
 grimoirelab-toolkit = { version = ">=0.3", allow-prereleases = true}
 
 [tool.poetry.group.dev.dependencies]
-flake8 = "^7.1.1"
+ruff = "^0.17.1"
+pre-commit = "^4.7.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+exclude = [
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".vscode",
+    "__pypackages__",
+    "__pycache__",
+    "_build",
+    "build",
+    "dist",
+    "docs",
+    "docker",
+    "site-packages",
+]

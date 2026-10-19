@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright (C) GrimoireLab Developers
 #
@@ -18,14 +17,13 @@
 
 import logging
 import re
-
-from typing import Any, Generator
+from collections.abc import Generator
+from typing import Any
 
 from cloudevents.http import CloudEvent
 from grimoirelab_toolkit.identities import generate_uuid
 
-from ...eventizer import Eventizer, uuid, Identity
-
+from ...eventizer import Eventizer, Identity, uuid
 
 GIT_EVENT_COMMIT = "org.grimoirelab.events.git.commit"
 GIT_EVENT_MERGE_COMMIT = "org.grimoirelab.events.git.merge"
@@ -77,16 +75,16 @@ class GitEventizer(Eventizer):
     def eventize_item(self, raw_item: dict[str, Any]) -> list[CloudEvent]:
         events = []
 
-        item_uuid = raw_item.get('uuid', None)
+        item_uuid = raw_item.get("uuid", None)
 
         if not item_uuid:
             raise ValueError("'uuid' attribute not found on item.")
-        if raw_item['backend_name'].lower() != 'git':
+        if raw_item["backend_name"].lower() != "git":
             raise ValueError(f"Item {item_uuid} is not a 'git' item.")
-        if raw_item['category'] != 'commit':
+        if raw_item["category"] != "commit":
             raise ValueError(f"Invalid category '{raw_item['category']}' for '{item_uuid}' item.")
 
-        if 'Merge' in raw_item['data']:
+        if "Merge" in raw_item["data"]:
             event_type = GIT_EVENT_MERGE_COMMIT
         else:
             event_type = GIT_EVENT_COMMIT
@@ -94,45 +92,50 @@ class GitEventizer(Eventizer):
         attributes = {
             "id": item_uuid,
             "type": event_type,
-            "source": raw_item['origin'],
-            "time": raw_item['updated_on'],
+            "source": raw_item["origin"],
+            "time": raw_item["updated_on"],
         }
 
-        event = CloudEvent(attributes, raw_item['data'])
+        event = CloudEvent(attributes, raw_item["data"])
         events.append(event)
 
-        action_events = self._eventize_commit_actions(event,
-                                                      raw_item['data']['commit'],
-                                                      raw_item['data']['files'])
+        action_events = self._eventize_commit_actions(
+            event, raw_item["data"]["commit"], raw_item["data"]["files"]
+        )
 
         events.extend(action_events)
 
-        identities_events = self._eventize_commit_identities(event,
-                                                             raw_item)
+        identities_events = self._eventize_commit_identities(event, raw_item)
 
         events.extend(identities_events)
 
         return events
 
-    def _eventize_commit_actions(self, parent_event: CloudEvent, commit_hash, raw_files_data):
-
+    def _eventize_commit_actions(
+        self,
+        parent_event: CloudEvent,
+        commit_hash: str,
+        raw_files_data: dict[str, Any],
+    ) -> list[CloudEvent]:
         events = []
 
         for file_data in raw_files_data:
-            actions = file_data.get('action', None)
+            actions = file_data.get("action", None)
 
-            if not actions and parent_event['type'] == GIT_EVENT_COMMIT:
+            if not actions and parent_event["type"] == GIT_EVENT_COMMIT:
                 raise ValueError(f"No action for commit event {parent_event['id']}")
             elif not actions:
                 continue
 
-            if parent_event['type'] == GIT_EVENT_COMMIT:
-                action_event = self._process_action(parent_event['source'],
-                                                    parent_event['time'],
-                                                    parent_event['id'],
-                                                    commit_hash,
-                                                    actions,
-                                                    file_data)
+            if parent_event["type"] == GIT_EVENT_COMMIT:
+                action_event = self._process_action(
+                    parent_event["source"],
+                    parent_event["time"],
+                    parent_event["id"],
+                    commit_hash,
+                    actions,
+                    file_data,
+                )
                 events.append(action_event)
             else:
                 prev_merge_action = None
@@ -140,47 +143,57 @@ class GitEventizer(Eventizer):
                     if action == prev_merge_action:
                         continue
 
-                    action_event = self._process_action(parent_event['source'],
-                                                        parent_event['time'],
-                                                        parent_event['id'],
-                                                        commit_hash,
-                                                        action,
-                                                        file_data)
+                    action_event = self._process_action(
+                        parent_event["source"],
+                        parent_event["time"],
+                        parent_event["id"],
+                        commit_hash,
+                        action,
+                        file_data,
+                    )
                     events.append(action_event)
                     prev_merge_action = action
         return events
 
-    def _process_action(self, source, time, event_uuid, commit_hash, action, file_data):
-        if action == 'A':
+    def _process_action(
+        self,
+        source: str,
+        time,
+        event_uuid: str,
+        commit_hash: str,
+        action: str,
+        file_data: dict[str, Any],
+    ) -> CloudEvent:
+        if action == "A":
             event_type = GIT_EVENT_ACTION_ADDED
-        elif action == 'M':
+        elif action == "M":
             event_type = GIT_EVENT_ACTION_MODIFIED
-        elif action == 'D':
+        elif action == "D":
             event_type = GIT_EVENT_ACTION_DELETED
-        elif action.startswith('R'):
+        elif action.startswith("R"):
             event_type = GIT_EVENT_ACTION_REPLACED
-        elif action.startswith('C'):
+        elif action.startswith("C"):
             event_type = GIT_EVENT_ACTION_COPIED
-        elif action.startswith('T'):
+        elif action.startswith("T"):
             event_type = GIT_EVENT_ACTION_TYPE_CHANGED
         else:
             raise ValueError(f"No valid action: {action}")
 
-        id_args = [event_uuid, file_data['file'], action]
-        if 'newfile' in file_data:
-            id_args.append(file_data['newfile'])
+        id_args = [event_uuid, file_data["file"], action]
+        if "newfile" in file_data:
+            id_args.append(file_data["newfile"])
 
         event_id = uuid(*id_args)
 
         data = {
             "commit": commit_hash,
-            "filename": file_data['file'],
-            "modes": file_data['modes'],
-            "indexes": file_data['indexes'],
-            "similarity": action[1:] if action in ('R', 'C') else None,
-            "new_filename": file_data.get('newfile', None),
-            "added_lines": file_data.get('added', None),
-            "deleted_lines": file_data.get('removed', None)
+            "filename": file_data["file"],
+            "modes": file_data["modes"],
+            "indexes": file_data["indexes"],
+            "similarity": action[1:] if action in ("R", "C") else None,
+            "new_filename": file_data.get("newfile", None),
+            "added_lines": file_data.get("added", None),
+            "deleted_lines": file_data.get("removed", None),
         }
 
         attributes = {
@@ -195,7 +208,11 @@ class GitEventizer(Eventizer):
 
         return event
 
-    def _eventize_commit_identities(self, parent_event: CloudEvent, raw_item: dict[str, Any]) -> list[CloudEvent]:
+    def _eventize_commit_identities(
+        self,
+        parent_event: CloudEvent,
+        raw_item: dict[str, Any],
+    ) -> list[CloudEvent]:
         """Eventize commit identities from a git commit item."""
 
         events = []
@@ -203,31 +220,37 @@ class GitEventizer(Eventizer):
         commit_hash = raw_item["data"]["commit"]
 
         authors = self._parse_authors(raw_item["data"]["Author"])
-        identity_events = self._process_identities(parent_event['source'],
-                                                   parent_event['time'],
-                                                   parent_event['id'],
-                                                   GIT_EVENT_COMMIT_AUTHORED_BY,
-                                                   commit_hash,
-                                                   authors)
+        identity_events = self._process_identities(
+            parent_event["source"],
+            parent_event["time"],
+            parent_event["id"],
+            GIT_EVENT_COMMIT_AUTHORED_BY,
+            commit_hash,
+            authors,
+        )
         events.extend(identity_events)
 
         committers = self._parse_authors(raw_item["data"]["Commit"])
-        identity_events = self._process_identities(parent_event['source'],
-                                                   parent_event['time'],
-                                                   parent_event['id'],
-                                                   GIT_EVENT_COMMIT_COMMITTED_BY,
-                                                   commit_hash,
-                                                   committers)
+        identity_events = self._process_identities(
+            parent_event["source"],
+            parent_event["time"],
+            parent_event["id"],
+            GIT_EVENT_COMMIT_COMMITTED_BY,
+            commit_hash,
+            committers,
+        )
         events.extend(identity_events)
 
         for trailer, event_type in COMMIT_TRAILERS.items():
             signers = raw_item["data"].get(trailer, [])
-            identity_events = self._process_identities(parent_event['source'],
-                                                       parent_event['time'],
-                                                       parent_event['id'],
-                                                       event_type,
-                                                       commit_hash,
-                                                       signers)
+            identity_events = self._process_identities(
+                parent_event["source"],
+                parent_event["time"],
+                parent_event["id"],
+                event_type,
+                commit_hash,
+                signers,
+            )
             events.extend(identity_events)
 
         return events
@@ -239,7 +262,7 @@ class GitEventizer(Eventizer):
         event_uuid: str,
         event_type: str,
         commit_hash: str,
-        raw_identities: list[str]
+        raw_identities: list[str],
     ) -> Generator[CloudEvent, None, None]:
         """Obtain identity events from a list of identities.
 
@@ -255,16 +278,20 @@ class GitEventizer(Eventizer):
         for raw_identity in raw_identities:
             try:
                 identity = self._parse_identity(raw_identity)
-                identity_id = generate_uuid(source="git",
-                                            email=identity.email,
-                                            name=identity.name,
-                                            username=identity.username)
+                identity_id = generate_uuid(
+                    source="git",
+                    email=identity.email,
+                    name=identity.name,
+                    username=identity.username,
+                )
             except ValueError as e:
-                logger.warning(f"Cannot generate UUID for identity '{raw_identity}' "
-                               f"in event '{event_uuid}': {e}. Skipping.")
+                logger.warning(
+                    f"Cannot generate UUID for identity '{raw_identity}' "
+                    f"in event '{event_uuid}': {e}. Skipping."
+                )
                 continue
 
-            role = event_type.split('.')[-1]
+            role = event_type.split(".")[-1]
             event_id = uuid(event_uuid, role, identity_id)
 
             data = {
