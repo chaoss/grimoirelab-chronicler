@@ -47,6 +47,8 @@ from .events import (
     MergeCommit,
 )
 
+GIT_DATASOURCE = "git"
+
 # Names of the commit fields on Perceval items and
 # the generic ones used by the commit events.
 GIT_COMMIT_FIELDS = {
@@ -90,8 +92,8 @@ class GitEventizer(Eventizer):
 
         if not item_uuid:
             raise ValueError("'uuid' attribute not found on item.")
-        if raw_item["backend_name"].lower() != "git":
-            raise ValueError(f"Item {item_uuid} is not a 'git' item.")
+        if raw_item["backend_name"].lower() != GIT_DATASOURCE:
+            raise ValueError(f"Item {item_uuid} is not a '{GIT_DATASOURCE}' item.")
         if raw_item["category"] != "commit":
             raise ValueError(f"Invalid category '{raw_item['category']}' for '{item_uuid}' item.")
 
@@ -111,6 +113,7 @@ class GitEventizer(Eventizer):
         event = event_class(
             id=item_uuid,
             source=raw_item["origin"],
+            datasource=GIT_DATASOURCE,
             time=raw_item["updated_on"],
             extra=extra,
             **commit_data,
@@ -207,6 +210,7 @@ class GitEventizer(Eventizer):
             id=event_id,
             linkedevent=event_uuid,
             source=source,
+            datasource=GIT_DATASOURCE,
             time=time,
             commit=commit_hash,
             filename=file_data["file"],
@@ -278,7 +282,7 @@ class GitEventizer(Eventizer):
     ) -> Generator[CloudEvent, None, None]:
         """Obtain identity events from a list of identities.
 
-        :param source: data source of the event
+        :param source: source of the event
         :param time: time of the event
         :param event_uuid: UUID of the parent event
         :param event_class: class of the identity event
@@ -291,7 +295,7 @@ class GitEventizer(Eventizer):
             try:
                 identity = self._parse_identity(raw_identity)
                 identity_id = generate_uuid(
-                    source="git",
+                    source=GIT_DATASOURCE,
                     email=identity.email,
                     name=identity.name,
                     username=identity.username,
@@ -310,6 +314,7 @@ class GitEventizer(Eventizer):
                 id=event_id,
                 linkedevent=event_uuid,
                 source=source,
+                datasource=GIT_DATASOURCE,
                 time=time,
                 commit=commit_hash,
                 name=identity.name,

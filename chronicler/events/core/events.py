@@ -28,7 +28,6 @@ class Commit(GrimoireLabEvent):
     """A commit on a VCS repository"""
 
     TYPE = "org.grimoirelab.events.commit"
-    DATASOURCE = "git"
 
     author: str = field(metadata={"description": "Author of the commit"})
     author_date: str = field(
@@ -65,8 +64,6 @@ class MergeCommit(Commit):
 @dataclass(kw_only=True)
 class CommitFileAction(GrimoireLabEvent):
     """Base class for the actions performed on a file by a commit"""
-
-    DATASOURCE = "git"
 
     commit: str = field(metadata={"description": "Commit hash"})
     filename: str = field(metadata={"description": "Name of the file"})
@@ -113,14 +110,11 @@ class CommitFileTypeChanged(CommitFileAction):
 class CommitIdentity(GrimoireLabEvent):
     """Base class for the identities that took part in a commit"""
 
-    DATASOURCE = "git"
-
     commit: str = field(metadata={"description": "Hash of the commit"})
     name: str | None = field(metadata={"description": "Name of the identity"})
     username: str | None = field(metadata={"description": "Username of the identity"})
     email: str | None = field(metadata={"description": "Email of the identity"})
     uuid: str = field(metadata={"description": "Unique identifier of the identity"})
-    datasource: str = field(default="git", metadata={"description": "Data source of the identity"})
     role: str = field(init=False, metadata={"description": "Role of the identity in the commit"})
 
     def __post_init__(self):

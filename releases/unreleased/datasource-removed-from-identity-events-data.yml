@@ -1,0 +1,11 @@
+---
+title: Data source of identity events as an attribute
+category: changed
+author: Santiago Dueñas <sduenas@grimoirelab.org>
+issue: null
+notes: >
+  The identity events no longer include the field `datasource` in their
+  data. The data source is available in the attribute `datasource` of
+  the event, as in the rest of the events. Consumers that read the
+  data source from the data of the identity events have to read it
+  from the attribute.

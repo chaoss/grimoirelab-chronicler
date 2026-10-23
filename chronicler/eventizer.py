@@ -37,20 +37,24 @@ class GrimoireLabEvent:
     """Base class of the GrimoireLab events.
 
     Each type of event is defined by a subclass. A subclass must set
-    the class attributes `TYPE` and `DATASOURCE`, and declare the fields
-    of the event payload as dataclass fields. The fields declared
-    in this class are the attributes of the CloudEvent; the ones
-    declared in the subclasses are the data of the event.
+    the class attribute `TYPE` and declare the fields of the event
+    payload as dataclass fields. The fields declared in this class
+    are the attributes of the CloudEvent; the ones declared in the
+    subclasses are the data of the event.
+
+    The data source that generated the event is not part of the
+    definition of the event, so the same event can be generated
+    by different data sources. It is given when the event is created.
 
     The constructor will raise a `TypeError` when a required field is
     missing or an unknown one is given.
     """
 
     TYPE: ClassVar[str]
-    DATASOURCE: ClassVar[str]
 
     id: str
     source: str
+    datasource: str
     time: str | float
     linkedevent: str | None = None
 
@@ -67,7 +71,7 @@ class GrimoireLabEvent:
         attributes = {
             "id": self.id,
             "type": self.TYPE,
-            "datasource": self.DATASOURCE,
+            "datasource": self.datasource,
             "source": self.source,
             "time": self.time,
         }

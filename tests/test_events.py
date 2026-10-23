@@ -37,6 +37,7 @@ class EventTestCase(unittest.TestCase):
             id="1234",
             linkedevent="abcd",
             source="https://example.git",
+            datasource="git",
             time=1344966351.0,
             commit="c6ba8f7a",
             filename="ddd/finalthing",
@@ -67,12 +68,49 @@ class EventTestCase(unittest.TestCase):
             },
         )
 
+    def test_datasource_is_given_on_creation(self):
+        """Check that the data source is set by whoever creates the event"""
+
+        kwargs = {
+            "id": "1234",
+            "source": "https://example.git",
+            "time": 1344966351.0,
+            "commit": "c6ba8f7a",
+            "filename": "ddd/finalthing",
+            "modes": [],
+            "indexes": [],
+        }
+
+        event = events.CommitFileAdded(datasource="git", **kwargs)
+        self.assertEqual(event.to_cloudevent()["datasource"], "git")
+
+        event = events.CommitFileAdded(datasource="other", **kwargs)
+        self.assertEqual(event.to_cloudevent()["datasource"], "other")
+
+        # The data source is an attribute, not part of the data
+        self.assertNotIn("datasource", event.to_cloudevent().data)
+
+    def test_datasource_is_required(self):
+        """Check if it fails when the data source is not given"""
+
+        with self.assertRaises(TypeError):
+            events.CommitFileAdded(
+                id="1234",
+                source="https://example.git",
+                time=1344966351.0,
+                commit="c6ba8f7a",
+                filename="ddd/finalthing",
+                modes=[],
+                indexes=[],
+            )
+
     def test_linkedevent_is_optional(self):
         """Check that linkedevent is not set when it is not given"""
 
         event = events.CommitAuthoredBy(
             id="1234",
             source="https://example.git",
+            datasource="git",
             time=1344966351.0,
             commit="c6ba8f7a",
             name="John Smith",
@@ -85,7 +123,8 @@ class EventTestCase(unittest.TestCase):
 
         self.assertNotIn("linkedevent", cloudevent.get_attributes())
         self.assertEqual(cloudevent.data["role"], "authored_by")
-        self.assertEqual(cloudevent.data["datasource"], "git")
+        self.assertEqual(cloudevent["datasource"], "git")
+        self.assertNotIn("datasource", cloudevent.data)
 
     def test_commit_extra_fields(self):
         """Check if the extra fields of a commit are merged into the data"""
@@ -93,6 +132,7 @@ class EventTestCase(unittest.TestCase):
         event = events.Commit(
             id="1234",
             source="https://example.git",
+            datasource="git",
             time=1344966351.0,
             author="John Smith <jsmith@example.com>",
             author_date="Tue Aug 14 14:45:51 2012 -0300",
@@ -118,6 +158,7 @@ class EventTestCase(unittest.TestCase):
             events.CommitFileAdded(
                 id="1234",
                 source="https://example.git",
+                datasource="git",
                 time=1344966351.0,
             )
 
@@ -128,6 +169,7 @@ class EventTestCase(unittest.TestCase):
             events.CommitFileAdded(
                 id="1234",
                 source="https://example.git",
+                datasource="git",
                 time=1344966351.0,
                 commit="c6ba8f7a",
                 filename="ddd/finalthing",
@@ -137,7 +179,7 @@ class EventTestCase(unittest.TestCase):
             )
 
     def test_event_definitions(self):
-        """Check that concrete events define type and datasource, and describe their fields"""
+        """Check that concrete events define their type and describe their fields"""
 
         types = []
 
@@ -146,7 +188,6 @@ class EventTestCase(unittest.TestCase):
                 continue
 
             self.assertTrue(kls.TYPE.startswith("org.grimoirelab.events."), kls)
-            self.assertTrue(kls.DATASOURCE, kls)
 
             for f in kls.data_fields():
                 self.assertIn("description", f.metadata, f"{kls.__name__}.{f.name}")
