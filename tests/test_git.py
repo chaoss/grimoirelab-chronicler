@@ -18,19 +18,19 @@
 import json
 import unittest
 
-from chronicler.events.core.git import (
-    GIT_EVENT_ACTION_ADDED,
-    GIT_EVENT_ACTION_COPIED,
-    GIT_EVENT_ACTION_MODIFIED,
-    GIT_EVENT_ACTION_REPLACED,
-    GIT_EVENT_COMMIT,
-    GIT_EVENT_COMMIT_AUTHORED_BY,
-    GIT_EVENT_COMMIT_CO_AUTHORED_BY,
-    GIT_EVENT_COMMIT_COMMITTED_BY,
-    GIT_EVENT_COMMIT_SIGNED_OFF_BY,
-    GIT_EVENT_MERGE_COMMIT,
-    GitEventizer,
+from chronicler.events.core.events import (
+    Commit,
+    CommitAuthoredBy,
+    CommitCoAuthoredBy,
+    CommitCommittedBy,
+    CommitFileAdded,
+    CommitFileCopied,
+    CommitFileModified,
+    CommitFileReplaced,
+    CommitSignedOffBy,
+    MergeCommit,
 )
+from chronicler.events.core.git import GitEventizer
 
 
 class GitEventizerTestCase(unittest.TestCase):
@@ -92,14 +92,24 @@ class GitEventizerTestCase(unittest.TestCase):
 
         commit_event = events[0]
         self.assertEqual(commit_event["id"], "439b7a02af9b8f6041951b3b2dc96b6929ea94a8")
-        self.assertEqual(commit_event["type"], GIT_EVENT_COMMIT)
+        self.assertEqual(commit_event["type"], Commit.TYPE)
         self.assertEqual(commit_event["source"], "https://example.git")
         self.assertEqual(commit_event["time"], 1344966351.0)
         self.assertEqual(commit_event.data["message"], "Add one final file")
+        self.assertEqual(
+            commit_event.data["author"], "Eduardo Morais <companheiro.vermelho@example.com>"
+        )
+        self.assertEqual(commit_event.data["author_date"], "Tue Aug 14 14:45:51 2012 -0300")
+        self.assertEqual(
+            commit_event.data["committer"], "Eduardo Morais <companheiro.vermelho@example.com>"
+        )
+        self.assertEqual(commit_event.data["commit_date"], "Tue Aug 14 14:45:51 2012 -0300")
+        for name in ("Author", "AuthorDate", "Commit", "CommitDate"):
+            self.assertNotIn(name, commit_event.data)
 
         action_event = events[1]
         self.assertEqual(action_event["id"], "6b93bbfcd583d9712179eee4801750023f17364a")
-        self.assertEqual(action_event["type"], GIT_EVENT_ACTION_ADDED)
+        self.assertEqual(action_event["type"], CommitFileAdded.TYPE)
         self.assertEqual(action_event["source"], "https://example.git")
         self.assertEqual(action_event["time"], 1344966351.0)
         self.assertEqual(action_event.data["commit"], "c6ba8f7a1058db3e6b4bc6f1090e932b107605fb")
@@ -109,7 +119,7 @@ class GitEventizerTestCase(unittest.TestCase):
 
         identity_event = events[2]
         self.assertEqual(identity_event["id"], "a2adafb6271350527cf126c8ebd2ddecfccf8613")
-        self.assertEqual(identity_event["type"], GIT_EVENT_COMMIT_AUTHORED_BY)
+        self.assertEqual(identity_event["type"], CommitAuthoredBy.TYPE)
         self.assertEqual(identity_event["source"], "https://example.git")
         self.assertEqual(identity_event["time"], 1344966351.0)
         self.assertEqual(identity_event.data["commit"], "c6ba8f7a1058db3e6b4bc6f1090e932b107605fb")
@@ -122,7 +132,7 @@ class GitEventizerTestCase(unittest.TestCase):
 
         identity_event = events[3]
         self.assertEqual(identity_event["id"], "0fc398a278a3a2dc11fafc9dc8274e05d1bf535a")
-        self.assertEqual(identity_event["type"], GIT_EVENT_COMMIT_COMMITTED_BY)
+        self.assertEqual(identity_event["type"], CommitCommittedBy.TYPE)
         self.assertEqual(identity_event["source"], "https://example.git")
         self.assertEqual(identity_event["time"], 1344966351.0)
         self.assertEqual(identity_event.data["commit"], "c6ba8f7a1058db3e6b4bc6f1090e932b107605fb")
@@ -195,9 +205,11 @@ class GitEventizerTestCase(unittest.TestCase):
 
         commit_event = events[0]
         self.assertEqual(commit_event["id"], "2abc82e1fb2917e2fb2d7018dba6fb4b4a8c29f0")
-        self.assertEqual(commit_event["type"], GIT_EVENT_MERGE_COMMIT)
+        self.assertEqual(commit_event["type"], MergeCommit.TYPE)
         self.assertEqual(commit_event["source"], "https://example.git")
         self.assertEqual(commit_event["time"], 1392185439.0)
+        self.assertEqual(commit_event.data["merge"], "ce8e0b8 51a3b65")
+        self.assertNotIn("Merge", commit_event.data)
         self.assertEqual(
             commit_event.data["parents"],
             [
@@ -208,7 +220,7 @@ class GitEventizerTestCase(unittest.TestCase):
 
         action_event = events[1]
         self.assertEqual(action_event["id"], "1cfb8955e9bdab98dc4cf120985839683a01a310")
-        self.assertEqual(action_event["type"], GIT_EVENT_ACTION_MODIFIED)
+        self.assertEqual(action_event["type"], CommitFileModified.TYPE)
         self.assertEqual(action_event["source"], "https://example.git")
         self.assertEqual(action_event["time"], 1392185439.0)
         self.assertEqual(action_event.data["commit"], "456a68ee1407a77f3e804a30dff245bb6c6b872f")
@@ -218,7 +230,7 @@ class GitEventizerTestCase(unittest.TestCase):
 
         action_event = events[2]
         self.assertEqual(action_event["id"], "db19cf3878cc70db807cf92e10461b60c872f73b")
-        self.assertEqual(action_event["type"], GIT_EVENT_ACTION_REPLACED)
+        self.assertEqual(action_event["type"], CommitFileReplaced.TYPE)
         self.assertEqual(action_event["source"], "https://example.git")
         self.assertEqual(action_event["time"], 1392185439.0)
         self.assertEqual(action_event.data["commit"], "456a68ee1407a77f3e804a30dff245bb6c6b872f")
@@ -228,7 +240,7 @@ class GitEventizerTestCase(unittest.TestCase):
 
         identity_event = events[3]
         self.assertEqual(identity_event["id"], "b59a52f21d07a33eacb2a9b202968743755f7aa6")
-        self.assertEqual(identity_event["type"], GIT_EVENT_COMMIT_AUTHORED_BY)
+        self.assertEqual(identity_event["type"], CommitAuthoredBy.TYPE)
         self.assertEqual(identity_event["source"], "https://example.git")
         self.assertEqual(identity_event["time"], 1392185439.0)
         self.assertEqual(identity_event.data["commit"], "456a68ee1407a77f3e804a30dff245bb6c6b872f")
@@ -241,7 +253,7 @@ class GitEventizerTestCase(unittest.TestCase):
 
         identity_event = events[4]
         self.assertEqual(identity_event["id"], "281802ecda04960e5841532e78bef91652c11583")
-        self.assertEqual(identity_event["type"], GIT_EVENT_COMMIT_COMMITTED_BY)
+        self.assertEqual(identity_event["type"], CommitCommittedBy.TYPE)
         self.assertEqual(identity_event["source"], "https://example.git")
         self.assertEqual(identity_event["time"], 1392185439.0)
         self.assertEqual(identity_event.data["commit"], "456a68ee1407a77f3e804a30dff245bb6c6b872f")
@@ -387,7 +399,7 @@ class GitEventizerTestCase(unittest.TestCase):
 
         commit_event = events[0]
         self.assertEqual(commit_event["id"], "6b4393b86512afc2e6757a6781e6018a661a72b0")
-        self.assertEqual(commit_event["type"], GIT_EVENT_COMMIT)
+        self.assertEqual(commit_event["type"], Commit.TYPE)
         self.assertEqual(commit_event["source"], "https://example.git")
         self.assertEqual(commit_event["time"], 1556580356.0)
         self.assertEqual(commit_event.data["message"], "Sample message for commit")
@@ -395,7 +407,7 @@ class GitEventizerTestCase(unittest.TestCase):
         action_event = events[1]
         self.assertEqual(action_event["id"], "b911ec8df7e804b40dddb5f402e82ae816283e9c")
         self.assertEqual(action_event["linkedevent"], "6b4393b86512afc2e6757a6781e6018a661a72b0")
-        self.assertEqual(action_event["type"], GIT_EVENT_ACTION_COPIED)
+        self.assertEqual(action_event["type"], CommitFileCopied.TYPE)
         self.assertEqual(action_event["source"], "https://example.git")
         self.assertEqual(action_event["time"], 1556580356.0)
         self.assertEqual(action_event.data["commit"], "7882c41g607ee5273da9637da0bb20ca7634cb83")
@@ -407,7 +419,7 @@ class GitEventizerTestCase(unittest.TestCase):
         action_event = events[2]
         self.assertEqual(action_event["id"], "5e1d30f0fd85e34cb08987bbb202201a31769b39")
         self.assertEqual(action_event["linkedevent"], "6b4393b86512afc2e6757a6781e6018a661a72b0")
-        self.assertEqual(action_event["type"], GIT_EVENT_ACTION_COPIED)
+        self.assertEqual(action_event["type"], CommitFileCopied.TYPE)
         self.assertEqual(action_event["source"], "https://example.git")
         self.assertEqual(action_event["time"], 1556580356.0)
         self.assertEqual(action_event.data["commit"], "7882c41g607ee5273da9637da0bb20ca7634cb83")
@@ -419,7 +431,7 @@ class GitEventizerTestCase(unittest.TestCase):
         identity_event = events[3]
         self.assertEqual(identity_event["id"], "8bae13d82339fd466ff8e2ed70af415f15a579a1")
         self.assertEqual(identity_event["linkedevent"], "6b4393b86512afc2e6757a6781e6018a661a72b0")
-        self.assertEqual(identity_event["type"], GIT_EVENT_COMMIT_AUTHORED_BY)
+        self.assertEqual(identity_event["type"], CommitAuthoredBy.TYPE)
         self.assertEqual(identity_event["source"], "https://example.git")
         self.assertEqual(identity_event["time"], 1556580356.0)
         self.assertEqual(identity_event.data["commit"], "7882c41g607ee5273da9637da0bb20ca7634cb83")
@@ -433,7 +445,7 @@ class GitEventizerTestCase(unittest.TestCase):
         identity_event = events[4]
         self.assertEqual(identity_event["id"], "8130e148d53d37198ebc63c95bf9c2691b75dab6")
         self.assertEqual(identity_event["linkedevent"], "6b4393b86512afc2e6757a6781e6018a661a72b0")
-        self.assertEqual(identity_event["type"], GIT_EVENT_COMMIT_COMMITTED_BY)
+        self.assertEqual(identity_event["type"], CommitCommittedBy.TYPE)
         self.assertEqual(identity_event["source"], "https://example.git")
         self.assertEqual(identity_event["time"], 1556580356.0)
         self.assertEqual(identity_event.data["commit"], "7882c41g607ee5273da9637da0bb20ca7634cb83")
@@ -502,11 +514,11 @@ class GitEventizerTestCase(unittest.TestCase):
 
         self.assertEqual(len(events), 6)
 
-        self.assertEqual(events[0]["type"], GIT_EVENT_COMMIT)
+        self.assertEqual(events[0]["type"], Commit.TYPE)
 
-        self.assertEqual(events[1]["type"], GIT_EVENT_ACTION_ADDED)
+        self.assertEqual(events[1]["type"], CommitFileAdded.TYPE)
 
-        self.assertEqual(events[2]["type"], GIT_EVENT_COMMIT_AUTHORED_BY)
+        self.assertEqual(events[2]["type"], CommitAuthoredBy.TYPE)
         self.assertEqual(events[2]["id"], "2ca3091ec32044d2f7db03314187c01f6aa01570")
         self.assertEqual(events[2].data["name"], "Tom")
         self.assertEqual(events[2].data["email"], "tom@example.com")
@@ -514,7 +526,7 @@ class GitEventizerTestCase(unittest.TestCase):
         self.assertEqual(events[2].data["uuid"], "1e575ef3e76f834094db7a3d1f2975c2de1a76e8")
         self.assertEqual(events[2].data["role"], "authored_by")
 
-        self.assertEqual(events[3]["type"], GIT_EVENT_COMMIT_COMMITTED_BY)
+        self.assertEqual(events[3]["type"], CommitCommittedBy.TYPE)
         self.assertEqual(events[3]["id"], "5de756d0fa9844dfc5c3f0f31a4920506a729e09")
         self.assertEqual(events[3].data["name"], "Tom")
         self.assertEqual(events[3].data["email"], "tom@example.com")
@@ -522,7 +534,7 @@ class GitEventizerTestCase(unittest.TestCase):
         self.assertEqual(events[3].data["uuid"], "1e575ef3e76f834094db7a3d1f2975c2de1a76e8")
         self.assertEqual(events[3].data["role"], "committed_by")
 
-        self.assertEqual(events[4]["type"], GIT_EVENT_COMMIT_CO_AUTHORED_BY)
+        self.assertEqual(events[4]["type"], CommitCoAuthoredBy.TYPE)
         self.assertEqual(events[4]["id"], "54cbd7350d51931f531eafa0499f144147017273")
         self.assertEqual(events[4].data["name"], "User name 2")
         self.assertEqual(events[4].data["email"], "user2@example.com")
@@ -530,7 +542,7 @@ class GitEventizerTestCase(unittest.TestCase):
         self.assertEqual(events[4].data["uuid"], "a440312a4ceb222ac7ea41f87e21e71625fe04b1")
         self.assertEqual(events[4].data["role"], "co_authored_by")
 
-        self.assertEqual(events[5]["type"], GIT_EVENT_COMMIT_SIGNED_OFF_BY)
+        self.assertEqual(events[5]["type"], CommitSignedOffBy.TYPE)
         self.assertEqual(events[5]["id"], "893f18a7deef6eecbc25db5f576f6840c8fde71e")
         self.assertEqual(events[5].data["name"], "Tom Signature")
         self.assertEqual(events[5].data["email"], "tom_signature@example.com")
@@ -593,12 +605,12 @@ class GitEventizerTestCase(unittest.TestCase):
         events = eventizer.eventize_item(raw_item)
         self.assertEqual(len(events), 9)
 
-        self.assertEqual(events[0]["type"], GIT_EVENT_COMMIT)
+        self.assertEqual(events[0]["type"], Commit.TYPE)
 
-        self.assertEqual(events[1]["type"], GIT_EVENT_ACTION_ADDED)
+        self.assertEqual(events[1]["type"], CommitFileAdded.TYPE)
 
         identity_event = events[2]
-        self.assertEqual(identity_event["type"], GIT_EVENT_COMMIT_AUTHORED_BY)
+        self.assertEqual(identity_event["type"], CommitAuthoredBy.TYPE)
         self.assertEqual(identity_event["id"], "d79b2902045c0caa80a862f1b265cf8b9b949062")
         self.assertEqual(identity_event["linkedevent"], "439b7a02af9b8f6041951b3b2dc96b6929ea94a8")
         self.assertEqual(identity_event["source"], "https://example.git")
@@ -611,7 +623,7 @@ class GitEventizerTestCase(unittest.TestCase):
         self.assertEqual(identity_event.data["datasource"], "git")
 
         identity_event = events[3]
-        self.assertEqual(identity_event["type"], GIT_EVENT_COMMIT_AUTHORED_BY)
+        self.assertEqual(identity_event["type"], CommitAuthoredBy.TYPE)
         self.assertEqual(identity_event["id"], "e9be85bc27c70ab87ca1f598af9e38c6f67e5f22")
         self.assertEqual(identity_event["linkedevent"], "439b7a02af9b8f6041951b3b2dc96b6929ea94a8")
         self.assertEqual(identity_event["source"], "https://example.git")
@@ -624,7 +636,7 @@ class GitEventizerTestCase(unittest.TestCase):
         self.assertEqual(identity_event.data["role"], "authored_by")
 
         identity_event = events[4]
-        self.assertEqual(identity_event["type"], GIT_EVENT_COMMIT_AUTHORED_BY)
+        self.assertEqual(identity_event["type"], CommitAuthoredBy.TYPE)
         self.assertEqual(identity_event["id"], "26266220f5b0b1d071875fcdad8d1896058829b6")
         self.assertEqual(identity_event["linkedevent"], "439b7a02af9b8f6041951b3b2dc96b6929ea94a8")
         self.assertEqual(identity_event["source"], "https://example.git")
@@ -638,7 +650,7 @@ class GitEventizerTestCase(unittest.TestCase):
         self.assertEqual(identity_event.data["role"], "authored_by")
 
         identity_event = events[5]
-        self.assertEqual(identity_event["type"], GIT_EVENT_COMMIT_AUTHORED_BY)
+        self.assertEqual(identity_event["type"], CommitAuthoredBy.TYPE)
         self.assertEqual(identity_event["id"], "8579f6957759f5e991283eb9d2912059c8f92b0f")
         self.assertEqual(identity_event["linkedevent"], "439b7a02af9b8f6041951b3b2dc96b6929ea94a8")
         self.assertEqual(identity_event["source"], "https://example.git")
@@ -652,7 +664,7 @@ class GitEventizerTestCase(unittest.TestCase):
         self.assertEqual(identity_event.data["role"], "authored_by")
 
         identity_event = events[6]
-        self.assertEqual(identity_event["type"], GIT_EVENT_COMMIT_COMMITTED_BY)
+        self.assertEqual(identity_event["type"], CommitCommittedBy.TYPE)
         self.assertEqual(identity_event["id"], "529c08c3a8ce575f19b3f4ac87c162570122307c")
         self.assertEqual(identity_event["linkedevent"], "439b7a02af9b8f6041951b3b2dc96b6929ea94a8")
         self.assertEqual(identity_event["source"], "https://example.git")
@@ -666,7 +678,7 @@ class GitEventizerTestCase(unittest.TestCase):
         self.assertEqual(identity_event.data["role"], "committed_by")
 
         identity_event = events[7]
-        self.assertEqual(identity_event["type"], GIT_EVENT_COMMIT_COMMITTED_BY)
+        self.assertEqual(identity_event["type"], CommitCommittedBy.TYPE)
         self.assertEqual(identity_event["id"], "829358b31ca25a0d9caddd5c343f8cd83b7859f4")
         self.assertEqual(identity_event["linkedevent"], "439b7a02af9b8f6041951b3b2dc96b6929ea94a8")
         self.assertEqual(identity_event["source"], "https://example.git")
@@ -680,7 +692,7 @@ class GitEventizerTestCase(unittest.TestCase):
         self.assertEqual(identity_event.data["role"], "committed_by")
 
         identity_event = events[8]
-        self.assertEqual(identity_event["type"], GIT_EVENT_COMMIT_COMMITTED_BY)
+        self.assertEqual(identity_event["type"], CommitCommittedBy.TYPE)
         self.assertEqual(identity_event["id"], "d5413231296d17b5ef0a68710465e97c99993156")
         self.assertEqual(identity_event["linkedevent"], "439b7a02af9b8f6041951b3b2dc96b6929ea94a8")
         self.assertEqual(identity_event["source"], "https://example.git")

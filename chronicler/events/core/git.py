@@ -24,38 +24,49 @@ from cloudevents.http import CloudEvent
 from grimoirelab_toolkit.identities import generate_uuid
 
 from ...eventizer import Eventizer, Identity, uuid
+from .events import (
+    Commit,
+    CommitAckedBy,
+    CommitAuthoredBy,
+    CommitCoAuthoredBy,
+    CommitCommittedBy,
+    CommitFileAdded,
+    CommitFileCopied,
+    CommitFileDeleted,
+    CommitFileModified,
+    CommitFileReplaced,
+    CommitFileTypeChanged,
+    CommitHelpedBy,
+    CommitIdentity,
+    CommitMentoredBy,
+    CommitReportedBy,
+    CommitReviewedBy,
+    CommitSignedOffBy,
+    CommitSuggestedBy,
+    CommitTestedBy,
+    MergeCommit,
+)
 
-GIT_EVENT_COMMIT = "org.grimoirelab.events.git.commit"
-GIT_EVENT_MERGE_COMMIT = "org.grimoirelab.events.git.merge"
-GIT_EVENT_ACTION_ADDED = "org.grimoirelab.events.git.file.added"
-GIT_EVENT_ACTION_MODIFIED = "org.grimoirelab.events.git.file.modified"
-GIT_EVENT_ACTION_DELETED = "org.grimoirelab.events.git.file.deleted"
-GIT_EVENT_ACTION_REPLACED = "org.grimoirelab.events.git.file.replaced"
-GIT_EVENT_ACTION_COPIED = "org.grimoirelab.events.git.file.copied"
-GIT_EVENT_ACTION_TYPE_CHANGED = "org.grimoirelab.events.git.file.typechanged"
-
-GIT_EVENT_COMMIT_AUTHORED_BY = "org.grimoirelab.events.git.commit.authored_by"
-GIT_EVENT_COMMIT_COMMITTED_BY = "org.grimoirelab.events.git.commit.committed_by"
-GIT_EVENT_COMMIT_ACKED_BY = "org.grimoirelab.events.git.commit.acked_by"
-GIT_EVENT_COMMIT_CO_AUTHORED_BY = "org.grimoirelab.events.git.commit.co_authored_by"
-GIT_EVENT_COMMIT_HELPED_BY = "org.grimoirelab.events.git.commit.helped_by"
-GIT_EVENT_COMMIT_MENTORED_BY = "org.grimoirelab.events.git.commit.mentored_by"
-GIT_EVENT_COMMIT_REPORTED_BY = "org.grimoirelab.events.git.commit.reported_by"
-GIT_EVENT_COMMIT_REVIEWED_BY = "org.grimoirelab.events.git.commit.reviewed_by"
-GIT_EVENT_COMMIT_SIGNED_OFF_BY = "org.grimoirelab.events.git.commit.signed_off_by"
-GIT_EVENT_COMMIT_SUGGESTED_BY = "org.grimoirelab.events.git.commit.suggested_by"
-GIT_EVENT_COMMIT_TESTED_BY = "org.grimoirelab.events.git.commit.tested_by"
+# Names of the commit fields on Perceval items and
+# the generic ones used by the commit events.
+GIT_COMMIT_FIELDS = {
+    "Author": "author",
+    "AuthorDate": "author_date",
+    "Commit": "committer",
+    "CommitDate": "commit_date",
+    "Merge": "merge",
+}
 
 COMMIT_TRAILERS = {
-    "Acked-by": GIT_EVENT_COMMIT_ACKED_BY,
-    "Co-authored-by": GIT_EVENT_COMMIT_CO_AUTHORED_BY,
-    "Helped-by": GIT_EVENT_COMMIT_HELPED_BY,
-    "Mentored-by": GIT_EVENT_COMMIT_MENTORED_BY,
-    "Reported-by": GIT_EVENT_COMMIT_REPORTED_BY,
-    "Reviewed-by": GIT_EVENT_COMMIT_REVIEWED_BY,
-    "Signed-off-by": GIT_EVENT_COMMIT_SIGNED_OFF_BY,
-    "Suggested-by": GIT_EVENT_COMMIT_SUGGESTED_BY,
-    "Tested-by": GIT_EVENT_COMMIT_TESTED_BY,
+    "Acked-by": CommitAckedBy,
+    "Co-authored-by": CommitCoAuthoredBy,
+    "Helped-by": CommitHelpedBy,
+    "Mentored-by": CommitMentoredBy,
+    "Reported-by": CommitReportedBy,
+    "Reviewed-by": CommitReviewedBy,
+    "Signed-off-by": CommitSignedOffBy,
+    "Suggested-by": CommitSuggestedBy,
+    "Tested-by": CommitTestedBy,
 }
 
 # Pair programming regex. Some matching examples are:
@@ -85,18 +96,25 @@ class GitEventizer(Eventizer):
             raise ValueError(f"Invalid category '{raw_item['category']}' for '{item_uuid}' item.")
 
         if "Merge" in raw_item["data"]:
-            event_type = GIT_EVENT_MERGE_COMMIT
+            event_class = MergeCommit
         else:
-            event_type = GIT_EVENT_COMMIT
+            event_class = Commit
 
-        attributes = {
-            "id": item_uuid,
-            "type": event_type,
-            "source": raw_item["origin"],
-            "time": raw_item["updated_on"],
-        }
+        data = {GIT_COMMIT_FIELDS.get(k, k): v for k, v in raw_item["data"].items()}
 
-        event = CloudEvent(attributes, raw_item["data"])
+        # Fields that are not part of the event definition, such as
+        # the trailers, are kept in the data of the event.
+        names = {f.name for f in event_class.data_fields()} - {"extra"}
+        commit_data = {k: v for k, v in data.items() if k in names}
+        extra = {k: v for k, v in data.items() if k not in names}
+
+        event = event_class(
+            id=item_uuid,
+            source=raw_item["origin"],
+            time=raw_item["updated_on"],
+            extra=extra,
+            **commit_data,
+        ).to_cloudevent()
         events.append(event)
 
         action_events = self._eventize_commit_actions(
@@ -122,12 +140,12 @@ class GitEventizer(Eventizer):
         for file_data in raw_files_data:
             actions = file_data.get("action", None)
 
-            if not actions and parent_event["type"] == GIT_EVENT_COMMIT:
+            if not actions and parent_event["type"] == Commit.TYPE:
                 raise ValueError(f"No action for commit event {parent_event['id']}")
             elif not actions:
                 continue
 
-            if parent_event["type"] == GIT_EVENT_COMMIT:
+            if parent_event["type"] == Commit.TYPE:
                 action_event = self._process_action(
                     parent_event["source"],
                     parent_event["time"],
@@ -165,17 +183,17 @@ class GitEventizer(Eventizer):
         file_data: dict[str, Any],
     ) -> CloudEvent:
         if action == "A":
-            event_type = GIT_EVENT_ACTION_ADDED
+            event_class = CommitFileAdded
         elif action == "M":
-            event_type = GIT_EVENT_ACTION_MODIFIED
+            event_class = CommitFileModified
         elif action == "D":
-            event_type = GIT_EVENT_ACTION_DELETED
+            event_class = CommitFileDeleted
         elif action.startswith("R"):
-            event_type = GIT_EVENT_ACTION_REPLACED
+            event_class = CommitFileReplaced
         elif action.startswith("C"):
-            event_type = GIT_EVENT_ACTION_COPIED
+            event_class = CommitFileCopied
         elif action.startswith("T"):
-            event_type = GIT_EVENT_ACTION_TYPE_CHANGED
+            event_class = CommitFileTypeChanged
         else:
             raise ValueError(f"No valid action: {action}")
 
@@ -185,28 +203,22 @@ class GitEventizer(Eventizer):
 
         event_id = uuid(*id_args)
 
-        data = {
-            "commit": commit_hash,
-            "filename": file_data["file"],
-            "modes": file_data["modes"],
-            "indexes": file_data["indexes"],
-            "similarity": action[1:] if action in ("R", "C") else None,
-            "new_filename": file_data.get("newfile", None),
-            "added_lines": file_data.get("added", None),
-            "deleted_lines": file_data.get("removed", None),
-        }
+        event = event_class(
+            id=event_id,
+            linkedevent=event_uuid,
+            source=source,
+            time=time,
+            commit=commit_hash,
+            filename=file_data["file"],
+            modes=file_data["modes"],
+            indexes=file_data["indexes"],
+            similarity=action[1:] if action in ("R", "C") else None,
+            new_filename=file_data.get("newfile", None),
+            added_lines=file_data.get("added", None),
+            deleted_lines=file_data.get("removed", None),
+        )
 
-        attributes = {
-            "id": event_id,
-            "linkedevent": event_uuid,
-            "type": event_type,
-            "source": source,
-            "time": time,
-        }
-
-        event = CloudEvent(attributes, data)
-
-        return event
+        return event.to_cloudevent()
 
     def _eventize_commit_identities(
         self,
@@ -224,7 +236,7 @@ class GitEventizer(Eventizer):
             parent_event["source"],
             parent_event["time"],
             parent_event["id"],
-            GIT_EVENT_COMMIT_AUTHORED_BY,
+            CommitAuthoredBy,
             commit_hash,
             authors,
         )
@@ -235,19 +247,19 @@ class GitEventizer(Eventizer):
             parent_event["source"],
             parent_event["time"],
             parent_event["id"],
-            GIT_EVENT_COMMIT_COMMITTED_BY,
+            CommitCommittedBy,
             commit_hash,
             committers,
         )
         events.extend(identity_events)
 
-        for trailer, event_type in COMMIT_TRAILERS.items():
+        for trailer, event_class in COMMIT_TRAILERS.items():
             signers = raw_item["data"].get(trailer, [])
             identity_events = self._process_identities(
                 parent_event["source"],
                 parent_event["time"],
                 parent_event["id"],
-                event_type,
+                event_class,
                 commit_hash,
                 signers,
             )
@@ -260,7 +272,7 @@ class GitEventizer(Eventizer):
         source: str,
         time: str,
         event_uuid: str,
-        event_type: str,
+        event_class: type[CommitIdentity],
         commit_hash: str,
         raw_identities: list[str],
     ) -> Generator[CloudEvent, None, None]:
@@ -269,7 +281,7 @@ class GitEventizer(Eventizer):
         :param source: data source of the event
         :param time: time of the event
         :param event_uuid: UUID of the parent event
-        :param event_type: type of the identity event
+        :param event_class: class of the identity event
         :param commit_hash: hash of the commit where identities contributed
         :param raw_identities: list of strings with the identities information
 
@@ -291,28 +303,22 @@ class GitEventizer(Eventizer):
                 )
                 continue
 
-            role = event_type.split(".")[-1]
+            role = event_class.TYPE.split(".")[-1]
             event_id = uuid(event_uuid, role, identity_id)
 
-            data = {
-                "commit": commit_hash,
-                "datasource": "git",
-                "name": identity.name,
-                "username": identity.username,
-                "email": identity.email,
-                "role": role,
-                "uuid": identity_id,
-            }
+            event = event_class(
+                id=event_id,
+                linkedevent=event_uuid,
+                source=source,
+                time=time,
+                commit=commit_hash,
+                name=identity.name,
+                username=identity.username,
+                email=identity.email,
+                uuid=identity_id,
+            )
 
-            attributes = {
-                "id": event_id,
-                "linkedevent": event_uuid,
-                "type": event_type,
-                "source": source,
-                "time": time,
-            }
-
-            yield CloudEvent(attributes, data)
+            yield event.to_cloudevent()
 
     @staticmethod
     def _parse_authors(authors: str) -> list[str]:

@@ -1,0 +1,9 @@
+---
+title: Data source attribute in events
+category: added
+author: Santiago Dueñas <sduenas@grimoirelab.org>
+issue: null
+notes: >
+  Events include the new attribute `datasource` with the name of the
+  data source that generated them, such as `git`. It allows filtering
+  events by data source without reading their type or their data.
