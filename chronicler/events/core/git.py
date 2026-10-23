@@ -37,13 +37,13 @@ from .events import (
     CommitFileReplaced,
     CommitFileTypeChanged,
     CommitHelpedBy,
-    CommitIdentity,
     CommitMentoredBy,
     CommitReportedBy,
     CommitReviewedBy,
     CommitSignedOffBy,
     CommitSuggestedBy,
     CommitTestedBy,
+    IdentityEvent,
     MergeCommit,
 )
 
@@ -233,15 +233,12 @@ class GitEventizer(Eventizer):
 
         events = []
 
-        commit_hash = raw_item["data"]["commit"]
-
         authors = self._parse_authors(raw_item["data"]["Author"])
         identity_events = self._process_identities(
             parent_event["source"],
             parent_event["time"],
             parent_event["id"],
             CommitAuthoredBy,
-            commit_hash,
             authors,
         )
         events.extend(identity_events)
@@ -252,7 +249,6 @@ class GitEventizer(Eventizer):
             parent_event["time"],
             parent_event["id"],
             CommitCommittedBy,
-            commit_hash,
             committers,
         )
         events.extend(identity_events)
@@ -264,7 +260,6 @@ class GitEventizer(Eventizer):
                 parent_event["time"],
                 parent_event["id"],
                 event_class,
-                commit_hash,
                 signers,
             )
             events.extend(identity_events)
@@ -276,8 +271,7 @@ class GitEventizer(Eventizer):
         source: str,
         time: str,
         event_uuid: str,
-        event_class: type[CommitIdentity],
-        commit_hash: str,
+        event_class: type[IdentityEvent],
         raw_identities: list[str],
     ) -> Generator[CloudEvent, None, None]:
         """Obtain identity events from a list of identities.
@@ -286,7 +280,6 @@ class GitEventizer(Eventizer):
         :param time: time of the event
         :param event_uuid: UUID of the parent event
         :param event_class: class of the identity event
-        :param commit_hash: hash of the commit where identities contributed
         :param raw_identities: list of strings with the identities information
 
         :returns: generator of CloudEvent with the identity information
@@ -316,7 +309,6 @@ class GitEventizer(Eventizer):
                 source=source,
                 datasource=GIT_DATASOURCE,
                 time=time,
-                commit=commit_hash,
                 name=identity.name,
                 username=identity.username,
                 email=identity.email,

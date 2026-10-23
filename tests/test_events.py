@@ -107,24 +107,71 @@ class EventTestCase(unittest.TestCase):
     def test_linkedevent_is_optional(self):
         """Check that linkedevent is not set when it is not given"""
 
-        event = events.CommitAuthoredBy(
+        event = events.Commit(
             id="1234",
             source="https://example.git",
             datasource="git",
             time=1344966351.0,
+            author="John Smith <jsmith@example.com>",
+            author_date="Tue Aug 14 14:45:51 2012 -0300",
+            committer="John Smith <jsmith@example.com>",
+            commit_date="Tue Aug 14 14:45:51 2012 -0300",
             commit="c6ba8f7a",
-            name="John Smith",
-            username=None,
-            email="jsmith@example.com",
-            uuid="abcd",
+            files=[],
+            message="Add one final file",
+            parents=[],
+            refs=[],
         )
 
         cloudevent = event.to_cloudevent()
 
         self.assertNotIn("linkedevent", cloudevent.get_attributes())
-        self.assertEqual(cloudevent.data["role"], "authored_by")
+
+    def test_identity_event(self):
+        """Check if identity events are generated with the right attributes and data"""
+
+        event = events.CommitAuthoredBy(
+            id="1234",
+            linkedevent="abcd",
+            source="https://example.git",
+            datasource="git",
+            time=1344966351.0,
+            name="John Smith",
+            username=None,
+            email="jsmith@example.com",
+            uuid="efgh",
+        )
+
+        cloudevent = event.to_cloudevent()
+
+        self.assertEqual(cloudevent["type"], "org.grimoirelab.events.commit.authored_by")
+        self.assertEqual(cloudevent["linkedevent"], "abcd")
         self.assertEqual(cloudevent["datasource"], "git")
-        self.assertNotIn("datasource", cloudevent.data)
+        self.assertEqual(
+            cloudevent.data,
+            {
+                "name": "John Smith",
+                "username": None,
+                "email": "jsmith@example.com",
+                "uuid": "efgh",
+                "role": "authored_by",
+            },
+        )
+
+    def test_identity_event_requires_linkedevent(self):
+        """Check if identity events fail when they are not linked to an event"""
+
+        with self.assertRaisesRegex(ValueError, "'linkedevent' is required"):
+            events.CommitAuthoredBy(
+                id="1234",
+                source="https://example.git",
+                datasource="git",
+                time=1344966351.0,
+                name="John Smith",
+                username=None,
+                email="jsmith@example.com",
+                uuid="efgh",
+            )
 
     def test_commit_extra_fields(self):
         """Check if the extra fields of a commit are merged into the data"""

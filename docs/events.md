@@ -114,17 +114,16 @@ File objects found in the `files` field of [commit](#commit) and [merge commit](
 
 #### Commit contributors
 
-Information about contributors related to a commit.
+Information about contributors related to a commit. These events are linked to the
+event of the commit through the attribute `linkedevent`, which is always set.
 
-| Field    | Type     | Description                                       |
-|----------|----------|---------------------------------------------------|
-| commit   | `String` | Commit hash                                       |
-| name     | `String` | Name of the contributor                           |
-| username | `String` | Username of the contributor                       |
-| email    | `String` | Email of the contributor                          |
-| uuid     | `String` | Unique identifier of the contributor              |
-| role     | `String` | Role of the contributor.                          |
-| source   | `String` | Source of the identity. Always `git` for commits. |
+| Field    | Type     | Description                          |
+|----------|----------|--------------------------------------|
+| name     | `String` | Name of the contributor              |
+| username | `String` | Username of the contributor          |
+| email    | `String` | Email of the contributor             |
+| uuid     | `String` | Unique identifier of the contributor |
+| role     | `String` | Role of the contributor.             |
 
 ##### Author
 

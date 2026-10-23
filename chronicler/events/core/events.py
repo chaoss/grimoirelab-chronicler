@@ -107,59 +107,66 @@ class CommitFileTypeChanged(CommitFileAction):
 
 
 @dataclass(kw_only=True)
-class CommitIdentity(GrimoireLabEvent):
-    """Base class for the identities that took part in a commit"""
+class IdentityEvent(GrimoireLabEvent):
+    """Base class for the identities that took part in another event
 
-    commit: str = field(metadata={"description": "Hash of the commit"})
+    The event where the identity took part is given by the attribute
+    `linkedevent`, which is required for these events. The role of the
+    identity is the last part of the type of the event.
+    """
+
     name: str | None = field(metadata={"description": "Name of the identity"})
     username: str | None = field(metadata={"description": "Username of the identity"})
     email: str | None = field(metadata={"description": "Email of the identity"})
     uuid: str = field(metadata={"description": "Unique identifier of the identity"})
-    role: str = field(init=False, metadata={"description": "Role of the identity in the commit"})
+    role: str = field(init=False, metadata={"description": "Role of the identity in the event"})
 
     def __post_init__(self):
+        if self.linkedevent is None:
+            raise ValueError(f"'linkedevent' is required for {self.TYPE} events")
+
         self.role = self.TYPE.rsplit(".", 1)[-1]
 
 
-class CommitAuthoredBy(CommitIdentity):
+class CommitAuthoredBy(IdentityEvent):
     TYPE = "org.grimoirelab.events.commit.authored_by"
 
 
-class CommitCommittedBy(CommitIdentity):
+class CommitCommittedBy(IdentityEvent):
     TYPE = "org.grimoirelab.events.commit.committed_by"
 
 
-class CommitAckedBy(CommitIdentity):
+class CommitAckedBy(IdentityEvent):
     TYPE = "org.grimoirelab.events.commit.acked_by"
 
 
-class CommitCoAuthoredBy(CommitIdentity):
+class CommitCoAuthoredBy(IdentityEvent):
     TYPE = "org.grimoirelab.events.commit.co_authored_by"
 
 
-class CommitHelpedBy(CommitIdentity):
+class CommitHelpedBy(IdentityEvent):
     TYPE = "org.grimoirelab.events.commit.helped_by"
 
 
-class CommitMentoredBy(CommitIdentity):
+class CommitMentoredBy(IdentityEvent):
     TYPE = "org.grimoirelab.events.commit.mentored_by"
 
 
-class CommitReportedBy(CommitIdentity):
+class CommitReportedBy(IdentityEvent):
     TYPE = "org.grimoirelab.events.commit.reported_by"
 
 
-class CommitReviewedBy(CommitIdentity):
+class CommitReviewedBy(IdentityEvent):
     TYPE = "org.grimoirelab.events.commit.reviewed_by"
 
 
-class CommitSignedOffBy(CommitIdentity):
+class CommitSignedOffBy(IdentityEvent):
     TYPE = "org.grimoirelab.events.commit.signed_off_by"
 
 
-class CommitSuggestedBy(CommitIdentity):
+class CommitSuggestedBy(IdentityEvent):
     TYPE = "org.grimoirelab.events.commit.suggested_by"
 
 
-class CommitTestedBy(CommitIdentity):
+class CommitTestedBy(IdentityEvent):
     TYPE = "org.grimoirelab.events.commit.tested_by"

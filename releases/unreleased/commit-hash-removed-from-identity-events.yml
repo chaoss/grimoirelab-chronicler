@@ -1,0 +1,11 @@
+---
+title: Commit identity events linked to the commit event
+category: changed
+author: Santiago Dueñas <sduenas@grimoirelab.org>
+issue: null
+notes: >
+  The identity events of a commit - authors, committers and the people
+  listed in the trailers - no longer include the commit hash in their
+  data. They are linked to the event of the commit through the attribute
+  `linkedevent`, which is always set on these events. The commit hash
+  can be obtained from the linked event.
