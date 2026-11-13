@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright (C) GrimoireLab Developers
 #
@@ -31,22 +30,22 @@ from .eventizer import eventize
     "--input",
     help="File with perceval items",
     type=click.File("r"),
-    default=sys.stdin
+    default=sys.stdin,
 )
 @click.option(
     "--output",
     help="File where events will be written",
     type=click.File("w"),
-    default=sys.stdout
+    default=sys.stdout,
 )
 @click.option(
     "--json-line",
     help="Produce a JSON line for each output item",
     is_flag=True,
     show_default=True,
-    default=False
+    default=False,
 )
-@click.argument('datasource')
+@click.argument("datasource")
 @click.version_option(__version__, message="%(prog)s %(version)s")
 def chronicler(datasource, input, output, json_line):
     """Generates GrimoireLab events from the items fetched by Perceval.
@@ -61,16 +60,23 @@ def chronicler(datasource, input, output, json_line):
     Output is produced using JSON format. Use the option <json_line>
     to generate JSON object per line.
     """
+
     def _read_input(input):
         for line in input:
             yield json.loads(line)
 
     for item in eventize(datasource, _read_input(input)):
         if json_line:
-            obj = json.dumps(cloudevents.conversion.to_dict(item),
-                             separators=(',', ':'), sort_keys=True)
+            obj = json.dumps(
+                cloudevents.conversion.to_dict(item),
+                separators=(",", ":"),
+                sort_keys=True,
+            )
         else:
-            obj = json.dumps(cloudevents.conversion.to_dict(item),
-                             indent=4, sort_keys=True)
+            obj = json.dumps(
+                cloudevents.conversion.to_dict(item),
+                indent=4,
+                sort_keys=True,
+            )
         output.write(obj)
-        output.write('\n')
+        output.write("\n")

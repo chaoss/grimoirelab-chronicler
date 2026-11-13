@@ -35,17 +35,18 @@ jobs:
       run: |
         poetry install -vvv
         poetry run pip install -r requirements_dev.txt
-    - name: Lint with flake8
+    - name: Lint files
       run: |
-        poetry run flake8
-
+        poetry run ruff check --output-format=github
+    - name: Check format
+      run: |
+        poetry run ruff format --diff
     - name: Tests and Coverage
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         cd tests
         poetry run coverage run --source=chronicler run_tests.py
-
     - name: Coveralls
       uses: coverallsapp/github-action@643bc377ffa44ace6394b2b5d0d3950076de9f63 # v2.3.0
       continue-on-error: true
