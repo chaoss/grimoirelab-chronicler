@@ -15,7 +15,7 @@ all types of events. The attributes are based on the CloudEvents specification.
 |------------ |---------------|-----------------------------------------------------------|
 | id          | String         | Event identifier                                          |
 | datasource  | String         | Name of the data source that generated the event          |
-| linkedevent | String         | Identifier of the event that this event is linked to      |
+| linkedevent | String         | Optional. Identifier of the event this event derives from. It is omitted on events that do not derive from another event |
 | source      | URI-reference  | URL to the repository                                     |
 | specversion | String         | The version of the CloudEvents specification used         |
 | time        | Timestamp      | Timestamp of when the event happened                      |
@@ -30,14 +30,14 @@ Git events are related to commits in git repositories.
 
 #### Commit
 
-- Event type: `org.grimoirelab.events.git.commit`
+- Event type: `org.grimoirelab.events.commit`
 
 | Field         | Type                           | Description                                                                                                                                                                                                                             |
 |---------------|--------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Author        | `String`                       | Author of the commit                                                                                                                                                                                                                    |
-| AuthorDate    | `String`                       | Date when the author originally made the commit                                                                                                                                                                                         |
-| Commit        | `String`                       | Commiter of the changes                                                                                                                                                                                                                 |
-| CommitDate    | `String`                       | Date when the commit was last modified                                                                                                                                                                                                  |
+| author        | `String`                       | Author of the commit                                                                                                                                                                                                                    |
+| author_date   | `String`                       | Date when the author originally made the commit                                                                                                                                                                                         |
+| committer     | `String`                       | Committer of the changes                                                                                                                                                                                                                 |
+| commit_date   | `String`                       | Date when the commit was last modified                                                                                                                                                                                                  |
 | commit        | `String`                       | Commit hash                                                                                                                                                                                                                             |
 | files         | `List` ([file](#file-objects)) | Information about the changed files                                                                                                                                                                                                     |
 | message       | `String`                       | Commit message                                                                                                                                                                                                                          |
@@ -47,17 +47,17 @@ Git events are related to commits in git repositories.
 
 #### Merge commit
 
-- Event type: `org.grimoirelab.events.git.merge`
+- Event type: `org.grimoirelab.events.commit.merge`
 
 | Field      | Type                           | Description                                                                                                                                                                          |
 |------------|--------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Author     | `String`                       | Author of the commit                                                                                                                                                                 |
-| AuthorDate | `String`                       | Date when the author originally made the commit                                                                                                                                      |
-| Commit     | `String`                       | Commiter of the changes                                                                                                                                                              |
-| CommitDate | `String`                       | Date when the commit was last modified                                                                                                                                               |
+| author     | `String`                       | Author of the commit                                                                                                                                                                 |
+| author_date | `String`                       | Date when the author originally made the commit                                                                                                                                      |
+| committer  | `String`                       | Committer of the changes                                                                                                                                                              |
+| commit_date | `String`                       | Date when the commit was last modified                                                                                                                                               |
 | commit     | `String`                       | Commit hash                                                                                                                                                                          |
 | files      | `List` ([file](#file-objects)) | List of files changed                                                                                                                                                                |
-| Merge      | `String`                       | The tips of the merged branches                                                                                                                                                      |
+| merge      | `String`                       | The tips of the merged branches                                                                                                                                                      |
 | message    | `String`                       | Commit message                                                                                                                                                                       |
 | parents    | `List (string)`                | Hashes of logical predecessors in the line of development. See [parent](https://git-scm.com/docs/gitglossary#Documentation/gitglossary.txt-aiddefparentaparent) in Git documentation |
 | refs       | `List (string)`                | Git references. See [ref](https://git-scm.com/docs/gitglossary#Documentation/gitglossary.txt-aiddefrefaref) in Git documentation                                                     |
@@ -77,27 +77,27 @@ Git events are related to commits in git repositories.
 
 ##### File added
 
-- Event type: `org.grimoirelab.events.git.file.added`
+- Event type: `org.grimoirelab.events.commit.file.added`
 
 ##### File modified
 
-- Event type: `org.grimoirelab.events.git.file.modified`
+- Event type: `org.grimoirelab.events.commit.file.modified`
 
 ##### File deleted
 
-- Event type: `org.grimoirelab.events.git.file.deleted`
+- Event type: `org.grimoirelab.events.commit.file.deleted`
 
 ##### File replaced
 
-- Event type: `org.grimoirelab.events.git.file.replaced`
+- Event type: `org.grimoirelab.events.commit.file.replaced`
 
 ##### File copied
 
-- Event type: `org.grimoirelab.events.git.file.copied`
+- Event type: `org.grimoirelab.events.commit.file.copied`
 
 ##### File type changed
 
-- Event type: `org.grimoirelab.events.git.file.typechanged`
+- Event type: `org.grimoirelab.events.commit.file.typechanged`
 
 #### File objects
 
@@ -114,84 +114,83 @@ File objects found in the `files` field of [commit](#commit) and [merge commit](
 
 #### Commit contributors
 
-Information about contributors related to a commit.
+Information about contributors related to a commit. These events are linked to the
+event of the commit through the attribute `linkedevent`, which is always set.
 
-| Field    | Type     | Description                                       |
-|----------|----------|---------------------------------------------------|
-| commit   | `String` | Commit hash                                       |
-| name     | `String` | Name of the contributor                           |
-| username | `String` | Username of the contributor                       |
-| email    | `String` | Email of the contributor                          |
-| uuid     | `String` | Unique identifier of the contributor              |
-| role     | `String` | Role of the contributor.                          |
-| source   | `String` | Source of the identity. Always `git` for commits. |
+| Field    | Type     | Description                          |
+|----------|----------|--------------------------------------|
+| name     | `String` | Name of the contributor              |
+| username | `String` | Username of the contributor          |
+| email    | `String` | Email of the contributor             |
+| uuid     | `String` | Unique identifier of the contributor |
+| role     | `String` | Role of the contributor.             |
 
 ##### Author
 
 Identifies the person who originally wrote the patch or commit.
 
-- Event type: `org.grimoirelab.events.git.commit.authored_by`
+- Event type: `org.grimoirelab.events.commit.authored_by`
 
 ##### Committer
 
 Identifies the person who applied or committed the patch to the repository.
 
-- Event type: `org.grimoirelab.events.git.commit.committed_by`
+- Event type: `org.grimoirelab.events.commit.committed_by`
 
 ##### Acked-by
 
 Identifies the person who is more familiar with the area the patch
 attempts to modify and has approved the patch.
 
-- Event type: `org.grimoirelab.events.git.commit.acked_by`
+- Event type: `org.grimoirelab.events.commit.acked_by`
 
 ##### Co-authored-by
 
 Identifies people who exchanged drafts of a patch before submitting it.
 
-- Event type: `org.grimoirelab.events.git.commit.co_authored_by`
+- Event type: `org.grimoirelab.events.commit.co_authored_by`
 
 ##### Helped-by
 
 Identifies someone who suggested ideas for changes without providing the precise
 changes in patch form.
 
-- Event type: `org.grimoirelab.events.git.commit.helped_by`
+- Event type: `org.grimoirelab.events.commit.helped_by`
 
 ##### Mentored-by
 
 Identifies someone who helped develop a patch as part of a mentorship program
 (e.g., GSoC or Outreachy).
 
-- Event type: `org.grimoirelab.events.git.commit.mentored_by`
+- Event type: `org.grimoirelab.events.commit.mentored_by`
 
 ##### Reported-by
 
 Identifies the person who found the bug that the patch attempts to fix.
 
-- Event type: `org.grimoirelab.events.git.commit.reported_by`
+- Event type: `org.grimoirelab.events.commit.reported_by`
 
 ##### Reviewed-by
 Identifies the reviewer who, after a detailed analysis, is completely satisfied
 with the patch.
 
-- Event type: `org.grimoirelab.events.git.commit.reviewed_by`
+- Event type: `org.grimoirelab.events.commit.reviewed_by`
 
 ##### Signed-off-by
 
 Indicates that the committer certifies they have the rights to submit the work,
 typically by adding a sign-off line in the commit message.
 
-- Event type: `org.grimoirelab.events.git.commit.signed_off_by`
+- Event type: `org.grimoirelab.events.commit.signed_off_by`
 
 ##### Suggested-by
 
 Identifies the person who suggested the idea for a patch.
 
-- Event type: `org.grimoirelab.events.git.commit.suggested_by`
+- Event type: `org.grimoirelab.events.commit.suggested_by`
 
 ##### Tested-by
 
 Identifies the person who applied the patch and found it to have the desired effect.
 
-- Event type: `org.grimoirelab.events.git.commit.tested_by`
+- Event type: `org.grimoirelab.events.commit.tested_by`

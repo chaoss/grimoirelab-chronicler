@@ -20,7 +20,8 @@ import os
 import pkgutil
 from collections import namedtuple
 from collections.abc import Generator, Iterator
-from typing import Any
+from dataclasses import Field, dataclass, fields
+from typing import Any, ClassVar
 
 from cloudevents.http import CloudEvent
 
@@ -29,6 +30,57 @@ Identity = namedtuple(
     ["name", "email", "username"],
     defaults=(None, None, None),
 )
+
+
+@dataclass(kw_only=True)
+class GrimoireLabEvent:
+    """Base class of the GrimoireLab events.
+
+    Each type of event is defined by a subclass. A subclass must set
+    the class attribute `TYPE` and declare the fields of the event
+    payload as dataclass fields. The fields declared in this class
+    are the attributes of the CloudEvent; the ones declared in the
+    subclasses are the data of the event.
+
+    The data source that generated the event is not part of the
+    definition of the event, so the same event can be generated
+    by different data sources. It is given when the event is created.
+
+    The constructor will raise a `TypeError` when a required field is
+    missing or an unknown one is given.
+    """
+
+    TYPE: ClassVar[str]
+
+    id: str
+    source: str
+    datasource: str
+    time: str | float
+    linkedevent: str | None = None
+
+    @classmethod
+    def data_fields(cls) -> tuple[Field, ...]:
+        """Fields of the event that are part of its data."""
+
+        attributes = {f.name for f in fields(GrimoireLabEvent)}
+        return tuple(f for f in fields(cls) if f.name not in attributes)
+
+    def to_cloudevent(self) -> CloudEvent:
+        """Convert the event to a CloudEvent."""
+
+        attributes = {
+            "id": self.id,
+            "type": self.TYPE,
+            "datasource": self.datasource,
+            "source": self.source,
+            "time": self.time,
+        }
+        if self.linkedevent is not None:
+            attributes["linkedevent"] = self.linkedevent
+
+        data = {f.name: getattr(self, f.name) for f in self.data_fields()}
+
+        return CloudEvent(attributes, data)
 
 
 class Eventizer:

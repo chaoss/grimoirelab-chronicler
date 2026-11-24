@@ -1,0 +1,12 @@
+---
+title: Generic fields in commit events
+category: changed
+author: Santiago Dueñas <sduenas@grimoirelab.org>
+issue: null
+notes: >
+  The data of commit and merge commit events uses lowercase names that
+  do not depend on Git, so the events can be reused by other data sources.
+  `Author` is now `author`, `AuthorDate` is now `author_date`,
+  `Commit` is now `committer`, `CommitDate` is now `commit_date` and
+  `Merge` is now `merge`. Consumers reading these fields have to use
+  the new names.

@@ -1,0 +1,18 @@
+---
+title: Event types independent of the data source
+category: changed
+author: Santiago Dueñas <sduenas@grimoirelab.org>
+issue: null
+notes: >
+  Event types no longer include the name of the data source. They are
+  named after the entity that changed, so the same types can be reused
+  by other data sources. The data source is available in the new
+  attribute `datasource` of the events.
+  The Git event types change as follows:
+  `org.grimoirelab.events.git.commit` is now `org.grimoirelab.events.commit`,
+  `org.grimoirelab.events.git.merge` is now `org.grimoirelab.events.commit.merge`,
+  `org.grimoirelab.events.git.file.<action>` is now
+  `org.grimoirelab.events.commit.file.<action>` and
+  `org.grimoirelab.events.git.commit.<role>` is now
+  `org.grimoirelab.events.commit.<role>`.
+  Consumers that filter events by type have to use the new names.
