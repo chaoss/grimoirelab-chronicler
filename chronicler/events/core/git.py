@@ -17,7 +17,7 @@
 
 import logging
 import re
-from collections.abc import Generator
+from collections.abc import Generator, Iterable
 from typing import Any
 
 from cloudevents.http import CloudEvent
@@ -120,7 +120,7 @@ class GitEventizer(Eventizer):
         events = []
 
         for file_data in raw_files_data:
-            actions = file_data.get("action", None)
+            actions: str | None = file_data.get("action", None)
 
             if not actions and parent_event["type"] == GIT_EVENT_COMMIT:
                 raise ValueError(f"No action for commit event {parent_event['id']}")
@@ -258,11 +258,11 @@ class GitEventizer(Eventizer):
     def _process_identities(
         self,
         source: str,
-        time: str,
+        time: float,
         event_uuid: str,
         event_type: str,
         commit_hash: str,
-        raw_identities: list[str],
+        raw_identities: Iterable[str],
     ) -> Generator[CloudEvent, None, None]:
         """Obtain identity events from a list of identities.
 
@@ -320,11 +320,11 @@ class GitEventizer(Eventizer):
 
         m = GIT_AUTHORS_REGEX.match(authors)
         if m:
-            authors = m.group("first_authors").split(",")
-            authors = [author.strip() for author in authors]
-            authors += [m.group("last_author")]
-            authors += [f"<{m.group('email')}>"]
-            return authors
+            parsed_authors = m.group("first_authors").split(",")
+            parsed_authors = [author.strip() for author in parsed_authors]
+            parsed_authors += [m.group("last_author")]
+            parsed_authors += [f"<{m.group('email')}>"]
+            return parsed_authors
         else:
             return [authors]
 
@@ -333,7 +333,7 @@ class GitEventizer(Eventizer):
         """Extract identity information from a Git author string."""
 
         fields = git_author.split("<")
-        name = fields[0]
+        name: str | None = fields[0]
         name = name.strip()
         if not name:
             name = None

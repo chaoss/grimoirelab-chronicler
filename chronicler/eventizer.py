@@ -18,17 +18,16 @@
 import importlib
 import os
 import pkgutil
-from collections import namedtuple
-from collections.abc import Generator, Iterator
-from typing import Any
+from collections.abc import Collection, Container, Generator, Iterable, Iterator
+from typing import Any, NamedTuple
 
 from cloudevents.http import CloudEvent
 
-Identity = namedtuple(
-    "Identity",
-    ["name", "email", "username"],
-    defaults=(None, None, None),
-)
+
+class Identity(NamedTuple):
+    name: str | None = None
+    email: str | None = None
+    username: str | None = None
 
 
 class Eventizer:
@@ -50,7 +49,7 @@ class Eventizer:
     that item.
     """
 
-    def eventize(self, raw_items: Iterator[dict[str, Any]]) -> Generator[CloudEvent]:
+    def eventize(self, raw_items: Iterable[dict[str, Any]]) -> Generator[CloudEvent, None, None]:
         """Generate GrimoireLab events.
 
         Produce events from the given list of perceval items.
@@ -64,7 +63,7 @@ class Eventizer:
         raise NotImplementedError
 
 
-def eventize(name: str, raw_items: Iterator[dict[str, Any]]) -> Generator[CloudEvent]:
+def eventize(name: str, raw_items: Iterable[dict[str, Any]]) -> Generator[CloudEvent, None, None]:
     """Eventize data of a given type.
 
     Handy function to produce events from a set of perceval items
@@ -105,7 +104,7 @@ def _find_eventizers(top_package_name: str) -> dict[str, type[Eventizer]]:
     return _import_eventizers(modules)
 
 
-def _import_eventizers(modules):
+def _import_eventizers(modules: Collection[str]) -> dict[str, type[Eventizer]]:
     for module in modules:
         importlib.import_module(module)
 
@@ -116,7 +115,9 @@ def _import_eventizers(modules):
     return eventizers
 
 
-def _find_classes(parent, modules):
+def _find_classes(
+    parent: type[Eventizer], modules: Container[str]
+) -> Iterator[tuple[str, type[Eventizer]]]:
     parents = parent.__subclasses__()
 
     while parents:
@@ -133,7 +134,7 @@ def _find_classes(parent, modules):
         yield name, kls
 
 
-def uuid(*args):
+def uuid(*args: str) -> str:
     """Generate a UUID based on the given parameters.
 
     The UUID will be the SHA1 of the concatenation of the values
@@ -150,7 +151,7 @@ def uuid(*args):
     """
     import hashlib
 
-    def check_value(v):
+    def check_value(v: object) -> str:
         if not isinstance(v, str):
             raise TypeError(f"{v!s} value is not a string instance")
         elif not v:

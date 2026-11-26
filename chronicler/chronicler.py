@@ -17,6 +17,8 @@
 
 import json
 import sys
+from collections.abc import Iterator
+from typing import Any, TextIO
 
 import click
 import cloudevents.conversion
@@ -47,7 +49,7 @@ from .eventizer import eventize
 )
 @click.argument("datasource")
 @click.version_option(__version__, message="%(prog)s %(version)s")
-def chronicler(datasource, input, output, json_line):
+def chronicler(datasource: str, input: TextIO, output: TextIO, json_line: bool) -> None:
     """Generates GrimoireLab events from the items fetched by Perceval.
 
     The chronicler is a command line tool and a library that converts
@@ -61,7 +63,7 @@ def chronicler(datasource, input, output, json_line):
     to generate JSON object per line.
     """
 
-    def _read_input(input):
+    def _read_input(input: TextIO) -> Iterator[dict[str, Any]]:
         for line in input:
             yield json.loads(line)
 

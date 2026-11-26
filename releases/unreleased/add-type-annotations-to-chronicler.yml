@@ -1,0 +1,6 @@
+title: Add type annotations to Chronicler
+category: other
+author: Caligula-95 <93405075+Caligula-95@users.noreply.github.com>
+notes: >
+  Improve type annotations across Chronicler to make the code easier
+  to understand and maintain without changing its existing behavior.
